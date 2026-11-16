@@ -90,6 +90,60 @@
         "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\"}" },
         "url": "{{baseUrl}}/tasks/vault_refresh"
       }
+    },
+    {
+      "name": "Rename / Move Inode (vault_rename)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"inode_id\":\"{{inodeId}}\",\"new_parent_id\":\"{{parentId}}\",\"new_name\":\"renamed.txt\"}" },
+        "url": "{{baseUrl}}/tasks/vault_rename"
+      }
+    },
+    {
+      "name": "Write Packed Batch (vault_write_packed)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"parent_id\":\"{{parentId}}\",\"files_json\":\"[{\\\"name\\\":\\\"a.txt\\\",\\\"data\\\":\\\"aaa\\\"},{\\\"name\\\":\\\"b.txt\\\",\\\"data\\\":\\\"bbb\\\"}]\"}" },
+        "url": "{{baseUrl}}/tasks/vault_write_packed"
+      }
+    },
+    {
+      "name": "Create Partition (vault_partition_create)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"name\":\"thumbs\",\"root_folder\":\"/thumbs\",\"quota_bytes\":5368709120,\"policy\":\"first_fit\"}" },
+        "url": "{{baseUrl}}/tasks/vault_partition_create"
+      }
+    },
+    {
+      "name": "Resize Partition (vault_partition_resize)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"name\":\"thumbs\",\"new_quota_bytes\":10737418240}" },
+        "url": "{{baseUrl}}/tasks/vault_partition_resize"
+      }
+    },
+    {
+      "name": "Get Metrics (vault_metrics)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_metrics"
+      }
+    },
+    {
+      "name": "Enqueue Job (vault_jobs)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"kind\":\"sync\",\"target_path\":\"/\"}" },
+        "url": "{{baseUrl}}/tasks/vault_jobs"
+      }
     }
   ]
 }

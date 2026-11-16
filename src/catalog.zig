@@ -14,6 +14,12 @@ pub const task_delete = @import("tasks/delete_inode.zig");
 pub const task_quotas = @import("tasks/get_quotas.zig");
 pub const task_gc = @import("tasks/run_gc.zig");
 pub const task_refresh = @import("tasks/refresh_catalog.zig");
+pub const task_rename = @import("tasks/rename_inode.zig");
+pub const task_write_packed = @import("tasks/write_packed.zig");
+pub const task_part_create = @import("tasks/partition_create.zig");
+pub const task_part_resize = @import("tasks/partition_resize.zig");
+pub const task_metrics = @import("tasks/get_metrics.zig");
+pub const task_jobs = @import("tasks/enqueue_job.zig");
 
 pub const InitVaultService = task_init.InitVaultService;
 pub const MkdirService = task_mkdir.MkdirService;
@@ -24,6 +30,12 @@ pub const DeleteInodeService = task_delete.DeleteInodeService;
 pub const GetQuotasService = task_quotas.GetQuotasService;
 pub const RunGcService = task_gc.RunGcService;
 pub const RefreshCatalogService = task_refresh.RefreshCatalogService;
+pub const RenameInodeService = task_rename.RenameInodeService;
+pub const WritePackedService = task_write_packed.WritePackedService;
+pub const PartitionCreateService = task_part_create.PartitionCreateService;
+pub const PartitionResizeService = task_part_resize.PartitionResizeService;
+pub const GetMetricsService = task_metrics.GetMetricsService;
+pub const EnqueueJobService = task_jobs.EnqueueJobService;
 
 pub const tasks = [_]abi.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(InitVaultService, .{ .name = "vault_init" }),
@@ -35,6 +47,12 @@ pub const tasks = [_]abi.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(GetQuotasService, .{ .name = "vault_quotas" }),
     VaultPluginContainer.defineTaskService(RunGcService, .{ .name = "vault_gc" }),
     VaultPluginContainer.defineTaskService(RefreshCatalogService, .{ .name = "vault_refresh" }),
+    VaultPluginContainer.defineTaskService(RenameInodeService, .{ .name = "vault_rename" }),
+    VaultPluginContainer.defineTaskService(WritePackedService, .{ .name = "vault_write_packed" }),
+    VaultPluginContainer.defineTaskService(PartitionCreateService, .{ .name = "vault_partition_create" }),
+    VaultPluginContainer.defineTaskService(PartitionResizeService, .{ .name = "vault_partition_resize" }),
+    VaultPluginContainer.defineTaskService(GetMetricsService, .{ .name = "vault_metrics" }),
+    VaultPluginContainer.defineTaskService(EnqueueJobService, .{ .name = "vault_jobs" }),
 };
 
 pub const manifest: abi.ModuleManifest_ABI = .{

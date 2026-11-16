@@ -5,9 +5,9 @@ const app = @import("vault_app");
 const catalog = app.catalog;
 const container = app.container;
 
-test "vault catalog exports 9 Service tasks and executes full CRUD + GC + Quotas lifecycle" {
+test "vault catalog exports 15 Service tasks and executes full CRUD + GC + Quotas lifecycle" {
     const alloc = std.testing.allocator;
-    try std.testing.expectEqual(@as(usize, 9), catalog.tasks.len);
+    try std.testing.expectEqual(@as(usize, 15), catalog.tasks.len);
 
     const state = container.acquireGlobalState();
     defer container.releaseGlobalState();
@@ -65,4 +65,37 @@ test "vault catalog exports 9 Service tasks and executes full CRUD + GC + Quotas
     var gc_svc = catalog.RunGcService{ .state = state, .logger = logger };
     const gc_res = try gc_svc.execute(alloc, .{ .vault_id = "task-test" });
     try std.testing.expectEqual(@as(i64, 1), gc_res.deleted_blobs);
+
+    // Rename, writePacked, partition_create/resize, metrics, jobs
+    var part_create = catalog.PartitionCreateService{ .state = state, .logger = logger };
+    _ = try part_create.execute(alloc, .{
+        .vault_id = "task-test",
+        .name = "thumbs",
+        .root_folder = "/thumbs",
+        .quota_bytes = 1024,
+    });
+    var part_resize = catalog.PartitionResizeService{ .state = state, .logger = logger };
+    const r_part = try part_resize.execute(alloc, .{
+        .vault_id = "task-test",
+        .name = "thumbs",
+        .new_quota_bytes = 2048,
+    });
+    try std.testing.expectEqual(@as(i64, 2048), r_part.new_quota_bytes);
+
+    var packed_svc = catalog.WritePackedService{ .state = state, .logger = logger };
+    const packed_res = try packed_svc.execute(alloc, .{
+        .vault_id = "task-test",
+        .files_json = "[{\"name\":\"a.txt\",\"data\":\"aaa\"},{\"name\":\"b.txt\",\"data\":\"bbb\"}]",
+    });
+    defer alloc.free(packed_res.inode_ids_json);
+    try std.testing.expectEqual(@as(i64, 2), packed_res.count);
+
+    var job_svc = catalog.EnqueueJobService{ .state = state, .logger = logger };
+    const j_res = try job_svc.execute(alloc, .{ .vault_id = "task-test", .kind = "gc", .target_path = "/" });
+    try std.testing.expect(j_res.job_id >= 1);
+
+    var metrics_svc = catalog.GetMetricsService{ .state = state, .logger = logger };
+    const m_res = try metrics_svc.execute(alloc, .{ .vault_id = "task-test" });
+    try std.testing.expectEqual(@as(i64, 1), m_res.partition_count);
+    try std.testing.expect(m_res.job_count >= 1);
 }

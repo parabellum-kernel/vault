@@ -55,6 +55,36 @@
       "_id": "req_refresh", "_type": "request", "parentId": "wrk_vault", "name": "Refresh Catalog (vault_refresh)",
       "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_refresh",
       "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\"}" }
+    },
+    {
+      "_id": "req_rename", "_type": "request", "parentId": "wrk_vault", "name": "Rename Inode (vault_rename)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_rename",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"inode_id\":\"{{ _.inodeId }}\",\"new_parent_id\":\"{{ _.parentId }}\",\"new_name\":\"renamed.txt\"}" }
+    },
+    {
+      "_id": "req_write_packed", "_type": "request", "parentId": "wrk_vault", "name": "Write Packed (vault_write_packed)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_write_packed",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"parent_id\":\"{{ _.parentId }}\",\"files_json\":\"[{\\\"name\\\":\\\"a.txt\\\",\\\"data\\\":\\\"aaa\\\"}]\"}" }
+    },
+    {
+      "_id": "req_part_create", "_type": "request", "parentId": "wrk_vault", "name": "Create Partition (vault_partition_create)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_partition_create",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"name\":\"thumbs\",\"root_folder\":\"/thumbs\",\"quota_bytes\":5368709120,\"policy\":\"first_fit\"}" }
+    },
+    {
+      "_id": "req_part_resize", "_type": "request", "parentId": "wrk_vault", "name": "Resize Partition (vault_partition_resize)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_partition_resize",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"name\":\"thumbs\",\"new_quota_bytes\":10737418240}" }
+    },
+    {
+      "_id": "req_metrics", "_type": "request", "parentId": "wrk_vault", "name": "Get Metrics (vault_metrics)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_metrics",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\"}" }
+    },
+    {
+      "_id": "req_jobs", "_type": "request", "parentId": "wrk_vault", "name": "Enqueue Job (vault_jobs)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_jobs",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"kind\":\"sync\",\"target_path\":\"/\"}" }
     }
   ]
 }
