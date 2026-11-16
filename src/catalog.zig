@@ -20,6 +20,7 @@ pub const task_part_create = @import("tasks/partition_create.zig");
 pub const task_part_resize = @import("tasks/partition_resize.zig");
 pub const task_metrics = @import("tasks/get_metrics.zig");
 pub const task_jobs = @import("tasks/enqueue_job.zig");
+pub const task_stream = @import("tasks/stream.zig");
 
 pub const InitVaultService = task_init.InitVaultService;
 pub const MkdirService = task_mkdir.MkdirService;
@@ -36,6 +37,7 @@ pub const PartitionCreateService = task_part_create.PartitionCreateService;
 pub const PartitionResizeService = task_part_resize.PartitionResizeService;
 pub const GetMetricsService = task_metrics.GetMetricsService;
 pub const EnqueueJobService = task_jobs.EnqueueJobService;
+pub const StreamRangeService = task_stream.StreamRangeService;
 
 pub const tasks = [_]abi.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(InitVaultService, .{ .name = "vault_init" }),
@@ -53,6 +55,7 @@ pub const tasks = [_]abi.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(PartitionResizeService, .{ .name = "vault_partition_resize" }),
     VaultPluginContainer.defineTaskService(GetMetricsService, .{ .name = "vault_metrics" }),
     VaultPluginContainer.defineTaskService(EnqueueJobService, .{ .name = "vault_jobs" }),
+    VaultPluginContainer.defineTaskService(StreamRangeService, .{ .name = "vault_stream" }),
 };
 
 pub const manifest: abi.ModuleManifest_ABI = .{

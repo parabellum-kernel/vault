@@ -157,6 +157,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/GenericTaskResponse"
 
+  /tasks/vault_stream:
+    post:
+      tags: [Filesystem]
+      summary: Stream a file byte range with HTTP Range semantics
+      operationId: vaultStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultStreamRequest"
+      responses:
+        "200":
+          description: Stream chunk with content-range and byte payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
   /tasks/vault_rename:
     post:
       tags: [Filesystem]
@@ -410,6 +429,26 @@ components:
           type: integer
           format: int64
           default: 65536
+
+    VaultStreamRequest:
+      type: object
+      required: [vault_id, inode_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        inode_id:
+          type: string
+        range:
+          type: string
+          description: HTTP Range header (e.g. bytes=0-262143 or bytes=1024-)
+          default: ""
+          example: bytes=0-262143
+        max_chunk:
+          type: integer
+          format: int64
+          description: Max chunk size in bytes when range end is open
+          default: 262144
 
     VaultRenameRequest:
       type: object

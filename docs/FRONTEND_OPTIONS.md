@@ -50,21 +50,31 @@
   - No built-in video/PDF player (for `Range` streaming you would have to launch external `mpv` or `vlc`).
   - More manual effort for modern file explorers, drag-and-drop, and rich tables.
 
+### Option 5 — Terminal UI (TUI) + Pipe/Streaming Egress to OS Applications
+- **How it works**: lightweight CLI/TUI binary (`vault-tui`) in 100% Zig communicating with daemon HTTP tasks (`vault_ls`, `vault_stream`, `vault_quotas`, `vault_gc`). Opens/streams directly into system utilities (`mpv -`, `vlc -`, `zathura -`, `glow -`, `bat -`, `less`).
+- **Pros**:
+  - **Zero web dependencies**: no Node, no npm, no bundler, no WebView runtime.
+  - **Instant streaming**: leverages on-demand range chunks (`256 KiB`) over stdout pipes or HTTP `Range` without waiting for full download or decrypt.
+  - **Reuses OS tooling**: zero custom viewers needed for video, audio, PDFs, markdown, or text files.
+  - Interactive terminal navigation (keyboard shortcuts `j`/`k`, `Enter`, `g` for GC, `r` for refresh).
+- **Cons**:
+  - Sequential stdin pipes cannot do random seek for complex archive-based formats (like `.docx`); those require HTTP `Range` streaming or temporary file cache.
+
 ---
 
 ## Summary Matrix
 
-| Criterion | 1. Web SPA (TS) | 2. Tauri + Web UI | 3. Embedded HTML/JS | 4. Native Zig GUI |
-| :--- | :---: | :---: | :---: | :---: |
-| Development speed | High | High | Very high (MVP) | Medium/Low |
-| `<video>`/`Range` streaming | Native | Native | Native | External (`mpv`/`vlc`) |
-| Tray icon / Desktop sync | No | **Yes** | No | Possible |
-| Build dependencies | Node/Bun | Node/Bun + Rust | **None** | C/Zig UI libs |
-| Reusable over LAN/remote | **Yes** | Desktop only | **Yes** | No |
+| Criterion | 1. Web SPA (TS) | 2. Tauri + Web UI | 3. Embedded HTML/JS | 4. Native Zig GUI | 5. TUI + Pipes (Zig) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Development speed | High | High | Very high (MVP) | Medium/Low | **Immediate** |
+| `<video>`/`Range` streaming | Native | Native | Native | External (`mpv`/`vlc`) | **Pipe to `mpv -` / HTTP** |
+| Tray icon / Desktop sync | No | **Yes** | No | Possible | CLI / Daemon daemonized |
+| Build dependencies | Node/Bun | Node/Bun + Rust | **None** | C/Zig UI libs | **Zig compiler only** |
+| Reusable over LAN/remote | **Yes** | Desktop only | **Yes** | No | **Yes (SSH / headless)** |
 
 ---
 
 ## Recommendation
 
-1. **Start with Option 1 (TypeScript Web UI)** — or **Option 3** if you want 0 JS dependencies at the start — targeting `http://127.0.0.1:8787`. This lets you validate all tasks (`vault_ls`, `vault_upload`, `vault_read`, `vault_quotas`, `vault_metrics`, `vault_gc`) and `Range` streaming immediately.
-2. **Move to Option 2 (Tauri)** when entering **MVP 3 (Dropbox-style syncer)** and you need a tray icon, native folder picker, and automatic desktop daemon management.
+1. **Start with Option 5 (TUI + Streaming Pipes / Egress)** to have an instant, zero-dependency client in 100% Zig that lets you browse the vault, check quotas/metrics, run GC, and pipe decrypted streams on-the-fly to existing system viewers (`mpv`, `glow`, `zathura`, `less`).
+2. **Add Option 1 / 3 (Web UI)** when a visual graphical browser is desired, and **Option 2 (Tauri)** for MVP 3 when desktop system tray and folder-sync watcher are required.

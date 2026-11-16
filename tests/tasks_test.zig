@@ -5,9 +5,9 @@ const app = @import("vault_app");
 const catalog = app.catalog;
 const container = app.container;
 
-test "vault catalog exports 15 Service tasks and executes full CRUD + GC + Quotas lifecycle" {
+test "vault catalog exports 16 Service tasks and executes full CRUD + GC + Quotas lifecycle" {
     const alloc = std.testing.allocator;
-    try std.testing.expectEqual(@as(usize, 15), catalog.tasks.len);
+    try std.testing.expectEqual(@as(usize, 16), catalog.tasks.len);
 
     const state = container.acquireGlobalState();
     defer container.releaseGlobalState();
@@ -48,6 +48,19 @@ test "vault catalog exports 15 Service tasks and executes full CRUD + GC + Quota
     defer alloc.free(read_res.data);
     try std.testing.expectEqual(@as(i64, 4), read_res.bytes_read);
     try std.testing.expectEqualStrings("from", read_res.data);
+
+    var stream_svc = catalog.StreamRangeService{ .state = state, .logger = logger };
+    const stream_res = try stream_svc.execute(alloc, .{
+        .vault_id = "task-test",
+        .inode_id = up_res.inode_id,
+        .range = "bytes=0-4",
+    });
+    defer alloc.free(stream_res.content_range);
+    defer alloc.free(stream_res.data);
+    try std.testing.expectEqual(@as(i64, 206), stream_res.status_code);
+    try std.testing.expectEqual(@as(i64, 5), stream_res.bytes_read);
+    try std.testing.expectEqualStrings("bytes 0-4/25", stream_res.content_range);
+    try std.testing.expectEqualStrings("hello", stream_res.data);
 
     var quotas_svc = catalog.GetQuotasService{ .state = state, .logger = logger };
     const q_res = try quotas_svc.execute(alloc, .{ .vault_id = "task-test" });
