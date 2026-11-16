@@ -3,4 +3,5 @@ zig-out
 .env
 data/
 configs/sa_keys/
+configs/user_keys/
 configs/.env
