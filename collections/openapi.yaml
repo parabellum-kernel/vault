@@ -1,0 +1,494 @@
+openapi: 3.1.0
+info:
+  title: Vault VFS Daemon API
+  version: 0.1.0
+  description: >
+    Local HTTP API exposed by `flowdata-engine` (`inbound_http`) + `libvault.so`
+    for managing encrypted VFS vaults, directories, files, logical partitions,
+    quotas, metrics, garbage collection, and background jobs.
+
+servers:
+  - url: http://127.0.0.1:8787
+    description: Local Vault Daemon
+
+tags:
+  - name: Vault
+    description: Vault initialization and catalog synchronization
+  - name: Filesystem
+    description: VFS directory and file operations
+  - name: Partitions
+    description: Logical partition management
+  - name: Observability
+    description: Quotas, API metrics, and garbage collection
+  - name: Jobs
+    description: Asynchronous background job queue
+
+paths:
+  /tasks/vault_init:
+    post:
+      tags: [Vault]
+      summary: Initialize or mount a vault
+      operationId: vaultInit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultInitRequest"
+      responses:
+        "200":
+          description: Vault initialized or mounted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_refresh:
+    post:
+      tags: [Vault]
+      summary: Refresh remote catalog state
+      operationId: vaultRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultIdRequest"
+      responses:
+        "200":
+          description: Catalog refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_mkdir:
+    post:
+      tags: [Filesystem]
+      summary: Create a directory
+      operationId: vaultMkdir
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultMkdirRequest"
+      responses:
+        "200":
+          description: Directory created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_ls:
+    post:
+      tags: [Filesystem]
+      summary: List directory entries
+      operationId: vaultLs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultLsRequest"
+      responses:
+        "200":
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_upload:
+    post:
+      tags: [Filesystem]
+      summary: Upload a file
+      operationId: vaultUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultUploadRequest"
+      responses:
+        "200":
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_write_packed:
+    post:
+      tags: [Filesystem]
+      summary: Upload a batch of small files packed together
+      operationId: vaultWritePacked
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultWritePackedRequest"
+      responses:
+        "200":
+          description: Packed batch uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_read:
+    post:
+      tags: [Filesystem]
+      summary: Read a byte range from a file inode
+      operationId: vaultRead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultReadRequest"
+      responses:
+        "200":
+          description: Byte range read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_rename:
+    post:
+      tags: [Filesystem]
+      summary: Rename or move an inode
+      operationId: vaultRename
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultRenameRequest"
+      responses:
+        "200":
+          description: Inode renamed/moved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_delete:
+    post:
+      tags: [Filesystem]
+      summary: Delete an inode
+      operationId: vaultDelete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultDeleteRequest"
+      responses:
+        "200":
+          description: Inode deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_partition_create:
+    post:
+      tags: [Partitions]
+      summary: Create a logical partition
+      operationId: vaultPartitionCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultPartitionCreateRequest"
+      responses:
+        "200":
+          description: Partition created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_partition_resize:
+    post:
+      tags: [Partitions]
+      summary: Resize a logical partition quota
+      operationId: vaultPartitionResize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultPartitionResizeRequest"
+      responses:
+        "200":
+          description: Partition resized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_quotas:
+    post:
+      tags: [Observability]
+      summary: Get storage pool quotas
+      operationId: vaultQuotas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultIdRequest"
+      responses:
+        "200":
+          description: Pool quota summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_metrics:
+    post:
+      tags: [Observability]
+      summary: Get API and cache metrics
+      operationId: vaultMetrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultIdRequest"
+      responses:
+        "200":
+          description: API and cache metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_gc:
+    post:
+      tags: [Observability]
+      summary: Run garbage collector on unreferenced blobs
+      operationId: vaultGc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultIdRequest"
+      responses:
+        "200":
+          description: Garbage collection completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+  /tasks/vault_jobs:
+    post:
+      tags: [Jobs]
+      summary: Enqueue a background job
+      operationId: vaultJobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultJobsRequest"
+      responses:
+        "200":
+          description: Job enqueued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericTaskResponse"
+
+components:
+  schemas:
+    VaultIdRequest:
+      type: object
+      required: [vault_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+          example: default
+
+    VaultInitRequest:
+      type: object
+      required: [vault_id, device_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        device_id:
+          type: string
+          example: vault-desktop-01
+
+    VaultMkdirRequest:
+      type: object
+      required: [vault_id, parent_id, name]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        parent_id:
+          type: string
+          description: Parent directory inode ID (empty string for root)
+          example: ""
+        name:
+          type: string
+          example: docs
+
+    VaultLsRequest:
+      type: object
+      required: [vault_id, parent_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        parent_id:
+          type: string
+          description: Parent directory inode ID (empty string for root)
+          example: ""
+
+    VaultUploadRequest:
+      type: object
+      required: [vault_id, parent_id, name, data]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        partition:
+          type: string
+          default: ""
+        parent_id:
+          type: string
+          example: ""
+        name:
+          type: string
+          example: hello.txt
+        data:
+          type: string
+          example: hello vault
+
+    VaultWritePackedRequest:
+      type: object
+      required: [vault_id, parent_id, files_json]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        parent_id:
+          type: string
+          example: ""
+        files_json:
+          type: string
+          description: JSON-encoded array of `{name, data}` objects
+          example: '[{"name":"a.txt","data":"aaa"},{"name":"b.txt","data":"bbb"}]'
+
+    VaultReadRequest:
+      type: object
+      required: [vault_id, inode_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        inode_id:
+          type: string
+        offset:
+          type: integer
+          format: int64
+          default: 0
+        max_len:
+          type: integer
+          format: int64
+          default: 65536
+
+    VaultRenameRequest:
+      type: object
+      required: [vault_id, inode_id, new_parent_id, new_name]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        inode_id:
+          type: string
+        new_parent_id:
+          type: string
+        new_name:
+          type: string
+          example: renamed.txt
+
+    VaultDeleteRequest:
+      type: object
+      required: [vault_id, inode_id]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        inode_id:
+          type: string
+
+    VaultPartitionCreateRequest:
+      type: object
+      required: [vault_id, name, root_folder, quota_bytes, policy]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        name:
+          type: string
+          example: thumbs
+        root_folder:
+          type: string
+          example: /thumbs
+        quota_bytes:
+          type: integer
+          format: int64
+          example: 5368709120
+        policy:
+          type: string
+          enum: [first_fit, most_available, random, pinned_account]
+          example: first_fit
+
+    VaultPartitionResizeRequest:
+      type: object
+      required: [vault_id, name, new_quota_bytes]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        name:
+          type: string
+          example: thumbs
+        new_quota_bytes:
+          type: integer
+          format: int64
+          example: 10737418240
+
+    VaultJobsRequest:
+      type: object
+      required: [vault_id, kind, target_path]
+      properties:
+        vault_id:
+          type: string
+          default: default
+        kind:
+          type: string
+          enum: [sync, upload, download, gc]
+          example: sync
+        target_path:
+          type: string
+          example: /
+
+    GenericTaskResponse:
+      type: object
+      additionalProperties: true
+      description: JSON task execution result returned by flowdata-engine
