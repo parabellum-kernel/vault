@@ -1,0 +1,34 @@
+{
+  "info": {
+    "name": "Vault VFS Daemon API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8787" },
+    { "key": "vaultId", "value": "default" },
+    { "key": "inodeId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "List Vaults",
+      "request": { "method": "GET", "url": "{{baseUrl}}/vaults" }
+    },
+    {
+      "name": "List Jobs",
+      "request": { "method": "GET", "url": "{{baseUrl}}/jobs" }
+    },
+    {
+      "name": "Stream Inode (Range)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Range", "value": "bytes=0-1023" }],
+        "url": "{{baseUrl}}/stream/{{vaultId}}/{{inodeId}}"
+      }
+    }
+  ]
+}
+

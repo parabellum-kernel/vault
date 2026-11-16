@@ -1,0 +1,24 @@
+.{
+    .name = .vault,
+    .version = "0.1.0",
+    .fingerprint = 0xff304921c39e50f2,
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .parabellum_sdk = .{
+            .path = "../sdk",
+        },
+        .parabellum_libs = .{
+            .path = "../lib",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "tests",
+        "configs",
+        "scripts",
+        "collections",
+        "README.md",
+    },
+}

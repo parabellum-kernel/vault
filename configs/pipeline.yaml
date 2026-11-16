@@ -1,0 +1,34 @@
+version: 2
+
+runtime:
+  workers: 4
+  scheduler: dag
+  routing: type_driven
+
+extensions:
+  inbound_http:
+    host: "${VAULT_HOST:-127.0.0.1}"
+    port: 8787
+
+datasources:
+  # 1. Vault & logical partitions config (standard `yaml_file` driver)
+  vault_config:
+    driver: yaml_file
+    role: source
+    path: "${VAULT_CONFIG_PATH:-./configs/vault.yaml}"
+
+  # 2. Local CatalogPort backing (`sqlite` driver)
+  vfs_catalog_db:
+    driver: sqlite
+    role: duplex
+    path: "${VAULT_DB_PATH:-./data/vault_catalog.db}"
+
+  # 3. Google Drive storage driver (`libdriver_gdrive_store.so`, wraps `lib-gdrive-vfs`)
+  gdrive_primary:
+    driver: gdrive_store
+    role: duplex
+    vault_id: "${VAULT_ID:-default}"
+    node_id: "${VAULT_NODE_ID:-sa-01}"
+
+tasks:
+  catalog: "./zig-out/lib/libvault.so"

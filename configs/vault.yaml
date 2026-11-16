@@ -1,0 +1,24 @@
+# Vault & Logical Partitions Configuration (loaded via `yaml_file` datasource)
+vault:
+  id: "${VAULT_ID:-default}"
+  device_id: "${VAULT_DEVICE_ID:-vault-desktop-01}"
+  device_key_path: "${VAULT_DEVICE_KEY_PATH:-./data/device.key}"
+  sa_keys_dir: "${VAULT_SA_KEYS_DIR:-./sa_keys}"
+  bootstrap_cred: "${VAULT_BOOTSTRAP_CRED:-./sa_keys/vfs-sa-01.json}"
+  upload_policy: most_available # most_available | first_fit | random | pinned
+  read_cache_mb: 64
+  pack:
+    enabled: true
+    small_file_threshold_mb: 8
+    max_pack_size_mb: 64
+
+partitions:
+  - name: "official_docs"
+    root_folder: "/official"
+    quota_gb: 5
+    upload_policy: first_fit
+  - name: "archives"
+    root_folder: "/archives"
+    quota_gb: 50
+    upload_policy: most_available
+

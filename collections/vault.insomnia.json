@@ -1,0 +1,58 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_source": "vault-vfs",
+  "resources": [
+    {
+      "_id": "wrk_vault",
+      "_type": "workspace",
+      "name": "Vault VFS Daemon API",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_vault",
+      "_type": "environment",
+      "parentId": "wrk_vault",
+      "name": "Local Daemon",
+      "data": {
+        "baseUrl": "http://127.0.0.1:8787",
+        "vaultId": "default",
+        "inodeId": ""
+      }
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "wrk_vault",
+      "name": "Health",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/health"
+    },
+    {
+      "_id": "req_vaults",
+      "_type": "request",
+      "parentId": "wrk_vault",
+      "name": "List Vaults",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/vaults"
+    },
+    {
+      "_id": "req_jobs",
+      "_type": "request",
+      "parentId": "wrk_vault",
+      "name": "List Jobs",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/jobs"
+    },
+    {
+      "_id": "req_stream",
+      "_type": "request",
+      "parentId": "wrk_vault",
+      "name": "Stream Inode (Range)",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/stream/{{ _.vaultId }}/{{ _.inodeId }}",
+      "headers": [{ "name": "Range", "value": "bytes=0-1023" }]
+    }
+  ]
+}
+
