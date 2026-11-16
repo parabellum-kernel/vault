@@ -1,25 +1,25 @@
-# Especificación Funcional y Diseño de la Aplicación de Escritorio (VFS Client)
+# Functional Specification and Design of the Desktop Application (VFS Client)
 
-> Especificación limpia de funcionalidades y arquitectura de la aplicación de escritorio (estilo Dropbox + servidor local de jobs) construida sobre `lib/vfs` (`ARCH-037B`) y adaptadores `BlobStorePort` (`lib-gdrive-vfs`, `local-vfs`, `s3-vfs`, `ssh-vfs`).
-
----
-
-## 1. Alcance: Qué pertenece a la App vs. a las Librerías
-
-- **Responsabilidad de las librerías** (`lib/vfs`, `lib-gdrive`, `lib-gdrive-vfs`): cifrado, formato `GDRVPART`, `Packer`, `RangeCache`, `PoolAllocator` (`UploadPolicy`), `SyncCoordinator` (CAS), `BlobStorePort` y `ApiQuotaMetrics`.
-- **Responsabilidad de la App**:
-  1. Ciclo de vida del **Daemon único** y su API local (HTTP/REST + SSE/WS) para GUI, CLI y jobs externos.
-  2. Persistencia local (`SQLite` implementando `vfs.CatalogPort.VTable` + custodia cifrada de `device_sk` y credenciales de nodos).
-  3. Cola de trabajos en segundo plano, sincronizador bidireccional de carpetas y servidor de streaming `HTTP Range`.
-  4. Interfaz gráfica de usuario (GUI) y comandos CLI.
+> Clean specification of features and architecture for the desktop application (Dropbox-style + local job server) built on top of `lib/vfs` (`ARCH-037B`) and `BlobStorePort` adapters (`lib-gdrive-vfs`, `local-vfs`, `s3-vfs`, `ssh-vfs`).
 
 ---
 
-## 2. Arquitectura de Procesos
+## 1. Scope: What Belongs to the App vs. the Libraries
+
+- **Library responsibility** (`lib/vfs`, `lib-gdrive`, `lib-gdrive-vfs`): encryption, `GDRVPART` format, `Packer`, `RangeCache`, `PoolAllocator` (`UploadPolicy`), `SyncCoordinator` (CAS), `BlobStorePort`, and `ApiQuotaMetrics`.
+- **App responsibility**:
+  1. Lifecycle of the **single Daemon** and its local API (HTTP/REST + SSE/WS) for GUI, CLI, and external jobs.
+  2. Local persistence (`SQLite` implementing `vfs.CatalogPort.VTable` + encrypted custody of `device_sk` and node credentials).
+  3. Background job queue, bidirectional folder syncer, and `HTTP Range` streaming server.
+  4. Graphical user interface (GUI) and CLI commands.
+
+---
+
+## 2. Process Architecture
 
 ```text
 +-------------------+      +-------------------+      +-------------------+
-|   GUI Escritorio  |      |        CLI        |      |   Apps / Scripts  |
+|    Desktop GUI    |      |        CLI        |      |   Apps / Scripts  |
 +---------+---------+      +---------+---------+      +---------+---------+
           |                          |                          |
           +--------------------------+--------------------------+
@@ -27,68 +27,68 @@
                                      v
           +-----------------------------------------------------+
           |                 VFS App Daemon                      |
-          |  - Gestor de Vaults / Particiones (vfs.Vault)       |
-          |  - Cola de Jobs (upload, pack, download, sync, gc)  |
-          |  - Sync Engine (watcher local <-> vault.refresh())  |
+          |  - Vault / Partition Manager (vfs.Vault)            |
+          |  - Job Queue (upload, pack, download, sync, gc)     |
+          |  - Sync Engine (local watcher <-> vault.refresh())  |
           |  - Media Streamer (GET /stream/<inode_id> Range)    |
           +------------+---------------------------+------------+
                        |                           |
                        v                           v
           +------------------------+   +------------------------+
           | SQLite (CatalogPort)   |   | CompositeBlobStore     |
-          | caché local + estado   |   | (GDriveBlobStore, ...) |
+          | local cache + state    |   | (GDriveBlobStore, ...) |
           +------------------------+   +------------------------+
 ```
 
-**Invariante**: solo el Daemon mantiene abiertos los `vfs.Vault` activos (`vmk`, `current_etag`, `RangeCache`), evitando carreras `412 Precondition Failed` entre GUI, CLI y sincronizador.
+**Invariant**: only the Daemon keeps active `vfs.Vault` instances open (`vmk`, `current_etag`, `RangeCache`), preventing `412 Precondition Failed` races between GUI, CLI, and syncer.
 
 ---
 
-## 3. Especificación Funcional
+## 3. Functional Specification
 
-### F1. Gestión de Vaults, Claves y Particiones Lógicas
-- **Desbloqueo / Creación**: asistente inicial para crear un vault nuevo (`Vault.create`) o abrir uno existente (`Vault.open` / `discoverCatalogObjectId`), protegiendo la clave privada `device_sk` en local con passphrase o keyring del SO.
-- **Particiones lógicas**:
-  - Soportar múltiples vaults independientes en configuración (aislamiento total de claves y cuotas, p. ej. partición de 5 GiB para documentos oficiales).
-  - Soportar políticas de asignación por carpeta/operación (`MostAvailable`, `FirstFit`, `Random`, `PinnedAccount`) sobre pools homogéneos o híbridos (`CompositeBlobStore`).
+### F1. Vault, Key, and Logical Partition Management
+- **Unlock / Create**: initial wizard to create a new vault (`Vault.create`) or open an existing one (`Vault.open` / `discoverCatalogObjectId`), protecting the `device_sk` private key locally with a passphrase or OS keyring.
+- **Logical partitions**:
+  - Support multiple independent vaults in configuration (complete isolation of keys and quotas, e.g., a 5 GiB partition for official documents).
+  - Support per-folder/operation allocation policies (`MostAvailable`, `FirstFit`, `Random`, `PinnedAccount`) over homogeneous or hybrid pools (`CompositeBlobStore`).
 
-### F2. Explorador VFS (GUI & CLI)
-- Navegación jerárquica (`listDir`, `stat`), creación de directorios (`mkdir`), renombrado/movido (`rename`) y borrado (`delete`).
-- **Subida inteligente**:
-  - Archivos pequeños (`<= small_file_threshold`) → agrupados automáticamente en cola de lote con `vault.writePacked(...)`.
-  - Archivos grandes → subidos con `vault.write(...)`.
-- **Descarga**: exportación de archivos individuales o carpetas a disco local.
+### F2. VFS Explorer (GUI & CLI)
+- Hierarchical navigation (`listDir`, `stat`), directory creation (`mkdir`), rename/move (`rename`), and deletion (`delete`).
+- **Smart upload**:
+  - Small files (`<= small_file_threshold`) → automatically grouped into a batch queue with `vault.writePacked(...)`.
+  - Large files → uploaded with `vault.write(...)`.
+- **Download**: export individual files or folders to local disk.
 
-### F3. Streaming Multimedia y Previsualización (`HTTP Range`)
-- Endpoint local `GET /stream/<vault_id>/<inode_id>` con soporte completo de cabeceras `Range: bytes=start-end` y `206 Partial Content`.
-- Permite abrir vídeos, audio o PDFs directamente desde VLC, `mpv` o el navegador haciendo *seek* instantáneo gracias a `vault.readAt(...)` + `RangeCache` LRU en RAM.
+### F3. Media Streaming and Preview (`HTTP Range`)
+- Local endpoint `GET /stream/<vault_id>/<inode_id>` with full support for `Range: bytes=start-end` headers and `206 Partial Content`.
+- Allows opening videos, audio, or PDFs directly in VLC, `mpv`, or the browser with instant seeking thanks to `vault.readAt(...)` + in-RAM LRU `RangeCache`.
 
-### F4. Sincronización Bidireccional (Carpeta Local ↔ VFS)
-- Vincular una carpeta local con un directorio del VFS.
-- Detectar cambios locales (watcher / escaneo por `mtime` + hash) y cambios remotos (`vault.refresh()` periódico).
-- **Resolución de conflictos**: si ambos lados modificaron el mismo archivo, conservar la versión remota y renombrar la local a `"nombre (conflicted copy).ext"`.
-- **Seguridad de borrado**: ejecutar siempre `vault.refresh()` antes de lanzar `vault.runGc()` para no eliminar blobs referenciados por otro dispositivo.
+### F4. Bidirectional Sync (Local Folder ↔ VFS)
+- Link a local folder with a VFS directory.
+- Detect local changes (watcher / `mtime` + hash scan) and remote changes (periodic `vault.refresh()`).
+- **Conflict resolution**: if both sides modified the same file, keep the remote version and rename the local one to `"name (conflicted copy).ext"`.
+- **Delete safety**: always run `vault.refresh()` before launching `vault.runGc()` so blobs referenced by another device are never deleted.
 
-### F5. Cola de Jobs y Modo Servidor (CLI / Automatizaciones)
-- API local para encolar trabajos asíncronos (`upload`, `download`, `sync`, `gc`), consultar su progreso por SSE/WebSocket, pausarlos o cancelarlos.
-- Ingesta desde apps externas/CLI: permite recibir rutas de archivos locales cerrados (p. ej. segmentos de vídeo/streams ya finalizados) para subirlos sin bloquear la aplicación emisora.
+### F5. Job Queue and Server Mode (CLI / Automations)
+- Local API to enqueue asynchronous jobs (`upload`, `download`, `sync`, `gc`), monitor progress via SSE/WebSocket, pause, or cancel them.
+- Ingestion from external apps/CLI: accepts paths of closed local files (e.g., finished video segments/streams) to upload them without blocking the emitting application.
 
-### F6. Observabilidad y Mantenimiento
-- **Cuotas de almacenamiento**: vista global y por nodo usando `vault.getQuotas()` (`0` peticiones remotas), más acción bajo demanda en *Settings* (`vault.syncQuotasFromRemote()`) para verificar la cuota real en el proveedor.
-- **Métricas de API (por backend)**: para nodos Google Drive (`GDriveBlobStore.getApiMetrics()`), mostrar unidades consumidas en los últimos 60 s frente a los límites (`325,000` usuario / `1,000,000` proyecto), tráfico `bytes_uploaded` / `bytes_downloaded`, errores `429` y ratio de aciertos de `RangeCache`.
-- **Garbage Collector**: indicador de blobs pendientes de limpieza y botón/tarea programada para ejecutar `vault.runGc()`.
+### F6. Observability and Maintenance
+- **Storage quotas**: global and per-node view using `vault.getQuotas()` (`0` remote requests), plus an on-demand action in *Settings* (`vault.syncQuotasFromRemote()`) to verify the actual quota on the provider.
+- **API metrics (per backend)**: for Google Drive nodes (`GDriveBlobStore.getApiMetrics()`), display units consumed in the last 60 s against limits (`325,000` user / `1,000,000` project), `bytes_uploaded` / `bytes_downloaded` traffic, `429` errors, and `RangeCache` hit ratio.
+- **Garbage Collector**: indicator of blobs pending cleanup and a button/scheduled task to run `vault.runGc()`.
 
 ---
 
-## 4. Roadmap de Implementación
+## 4. Implementation Roadmap
 
-1. **MVP 1 — Core Daemon + SQLite `CatalogPort` + API REST**:
-   - Adaptador SQLite validado con `CatalogPort.runConformanceSuite`.
-   - Daemon HTTP local con endpoints para F1, F2, F3 (`GET /stream/...` con `Range`), F5 (cola de jobs) y F6 (cuotas + métricas).
-   - Exportar colección **Postman** e **Insomnia** con todos los endpoints de la API local del daemon para pruebas e integración.
-2. **MVP 2 — GUI de Escritorio + CLI**:
-   - Web UI embebida (servida por el propio binario) o GUI nativa conectada al daemon + cliente CLI ligero.
-3. **MVP 3 — Sincronizador Estilo Dropbox (F4)**:
-   - Watcher bidireccional, cola automática `writePacked`/`write` y gestión de conflictos.
-4. **MVP 4 — Montaje FUSE / POSIX (Opcional)**:
-   - Exponer el VFS como punto de montaje del SO reutilizando el mismo daemon y `RangeCache`.
+1. **MVP 1 — Core Daemon + SQLite `CatalogPort` + REST API**:
+   - SQLite adapter validated with `CatalogPort.runConformanceSuite`.
+   - Local HTTP daemon with endpoints for F1, F2, F3 (`GET /stream/...` with `Range`), F5 (job queue), and F6 (quotas + metrics).
+   - Export **Postman** and **Insomnia** collections with all local daemon API endpoints for testing and integration.
+2. **MVP 2 — Desktop GUI + CLI**:
+   - Embedded Web UI (served by the binary itself) or native GUI connected to the daemon + lightweight CLI client.
+3. **MVP 3 — Dropbox-Style Syncer (F4)**:
+   - Bidirectional watcher, automatic `writePacked`/`write` queue, and conflict management.
+4. **MVP 4 — FUSE / POSIX Mount (Optional)**:
+   - Expose the VFS as an OS mount point reusing the same daemon and `RangeCache`.
