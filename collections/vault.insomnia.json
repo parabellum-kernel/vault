@@ -3,56 +3,58 @@
   "__export_format": 4,
   "__export_source": "vault-vfs",
   "resources": [
-    {
-      "_id": "wrk_vault",
-      "_type": "workspace",
-      "name": "Vault VFS Daemon API",
-      "scope": "collection"
-    },
+    { "_id": "wrk_vault", "_type": "workspace", "name": "Vault VFS Daemon API", "scope": "collection" },
     {
       "_id": "env_vault",
       "_type": "environment",
       "parentId": "wrk_vault",
-      "name": "Local Daemon",
-      "data": {
-        "baseUrl": "http://127.0.0.1:8787",
-        "vaultId": "default",
-        "inodeId": ""
-      }
+      "name": "Local Engine",
+      "data": { "baseUrl": "http://127.0.0.1:8787", "vaultId": "default", "inodeId": "", "parentId": "" }
     },
     {
-      "_id": "req_health",
-      "_type": "request",
-      "parentId": "wrk_vault",
-      "name": "Health",
-      "method": "GET",
-      "url": "{{ _.baseUrl }}/health"
+      "_id": "req_init", "_type": "request", "parentId": "wrk_vault", "name": "Init Vault (vault_init)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_init",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"device_id\":\"vault-desktop-01\"}" }
     },
     {
-      "_id": "req_vaults",
-      "_type": "request",
-      "parentId": "wrk_vault",
-      "name": "List Vaults",
-      "method": "GET",
-      "url": "{{ _.baseUrl }}/vaults"
+      "_id": "req_mkdir", "_type": "request", "parentId": "wrk_vault", "name": "Make Directory (vault_mkdir)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_mkdir",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"parent_id\":\"{{ _.parentId }}\",\"name\":\"docs\"}" }
     },
     {
-      "_id": "req_jobs",
-      "_type": "request",
-      "parentId": "wrk_vault",
-      "name": "List Jobs",
-      "method": "GET",
-      "url": "{{ _.baseUrl }}/jobs"
+      "_id": "req_ls", "_type": "request", "parentId": "wrk_vault", "name": "List Directory (vault_ls)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_ls",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"parent_id\":\"{{ _.parentId }}\"}" }
     },
     {
-      "_id": "req_stream",
-      "_type": "request",
-      "parentId": "wrk_vault",
-      "name": "Stream Inode (Range)",
-      "method": "GET",
-      "url": "{{ _.baseUrl }}/stream/{{ _.vaultId }}/{{ _.inodeId }}",
-      "headers": [{ "name": "Range", "value": "bytes=0-1023" }]
+      "_id": "req_upload", "_type": "request", "parentId": "wrk_vault", "name": "Upload File (vault_upload)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_upload",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"partition\":\"\",\"parent_id\":\"{{ _.parentId }}\",\"name\":\"hello.txt\",\"data\":\"hello vault\"}" }
+    },
+    {
+      "_id": "req_read", "_type": "request", "parentId": "wrk_vault", "name": "Read Range (vault_read)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_read",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"inode_id\":\"{{ _.inodeId }}\",\"offset\":0,\"max_len\":65536}" }
+    },
+    {
+      "_id": "req_delete", "_type": "request", "parentId": "wrk_vault", "name": "Delete Inode (vault_delete)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_delete",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\",\"inode_id\":\"{{ _.inodeId }}\"}" }
+    },
+    {
+      "_id": "req_quotas", "_type": "request", "parentId": "wrk_vault", "name": "Pool Quotas (vault_quotas)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_quotas",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\"}" }
+    },
+    {
+      "_id": "req_gc", "_type": "request", "parentId": "wrk_vault", "name": "Run GC (vault_gc)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_gc",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\"}" }
+    },
+    {
+      "_id": "req_refresh", "_type": "request", "parentId": "wrk_vault", "name": "Refresh Catalog (vault_refresh)",
+      "method": "POST", "url": "{{ _.baseUrl }}/tasks/vault_refresh",
+      "body": { "mimeType": "application/json", "text": "{\"vault_id\":\"{{ _.vaultId }}\"}" }
     }
   ]
 }
-

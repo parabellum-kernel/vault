@@ -6,29 +6,90 @@
   "variable": [
     { "key": "baseUrl", "value": "http://127.0.0.1:8787" },
     { "key": "vaultId", "value": "default" },
-    { "key": "inodeId", "value": "" }
+    { "key": "inodeId", "value": "" },
+    { "key": "parentId", "value": "" }
   ],
   "item": [
     {
-      "name": "Health",
-      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
-    },
-    {
-      "name": "List Vaults",
-      "request": { "method": "GET", "url": "{{baseUrl}}/vaults" }
-    },
-    {
-      "name": "List Jobs",
-      "request": { "method": "GET", "url": "{{baseUrl}}/jobs" }
-    },
-    {
-      "name": "Stream Inode (Range)",
+      "name": "Init Vault (vault_init)",
       "request": {
-        "method": "GET",
-        "header": [{ "key": "Range", "value": "bytes=0-1023" }],
-        "url": "{{baseUrl}}/stream/{{vaultId}}/{{inodeId}}"
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"device_id\":\"vault-desktop-01\"}" },
+        "url": "{{baseUrl}}/tasks/vault_init"
+      }
+    },
+    {
+      "name": "Make Directory (vault_mkdir)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"parent_id\":\"{{parentId}}\",\"name\":\"docs\"}" },
+        "url": "{{baseUrl}}/tasks/vault_mkdir"
+      }
+    },
+    {
+      "name": "List Directory (vault_ls)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"parent_id\":\"{{parentId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_ls"
+      }
+    },
+    {
+      "name": "Upload File (vault_upload)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"partition\":\"\",\"parent_id\":\"{{parentId}}\",\"name\":\"hello.txt\",\"data\":\"hello vault\"}" },
+        "url": "{{baseUrl}}/tasks/vault_upload"
+      }
+    },
+    {
+      "name": "Read Range (vault_read)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"inode_id\":\"{{inodeId}}\",\"offset\":0,\"max_len\":65536}" },
+        "url": "{{baseUrl}}/tasks/vault_read"
+      }
+    },
+    {
+      "name": "Delete Inode (vault_delete)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\",\"inode_id\":\"{{inodeId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_delete"
+      }
+    },
+    {
+      "name": "Pool Quotas (vault_quotas)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_quotas"
+      }
+    },
+    {
+      "name": "Run Garbage Collector (vault_gc)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_gc"
+      }
+    },
+    {
+      "name": "Refresh Remote Catalog (vault_refresh)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"vault_id\":\"{{vaultId}}\"}" },
+        "url": "{{baseUrl}}/tasks/vault_refresh"
       }
     }
   ]
 }
-

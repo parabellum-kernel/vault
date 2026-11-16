@@ -28,11 +28,12 @@ pub fn build(b: *std.Build) void {
     plugin_so.root_module.addImport("vfs", vfs_mod);
     b.installArtifact(plugin_so);
 
-    const daemon_state_mod = b.createModule(.{
-        .root_source_file = b.path("src/DaemonState.zig"),
+    const vault_app_mod = b.createModule(.{
+        .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
             .{ .name = "vfs", .module = vfs_mod },
         },
     });
@@ -44,8 +45,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
                 .{ .name = "vfs", .module = vfs_mod },
-                .{ .name = "DaemonState", .module = daemon_state_mod },
+                .{ .name = "vault_app", .module = vault_app_mod },
             },
         }),
     });

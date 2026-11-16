@@ -1,5 +1,5 @@
 const std = @import("std");
-const DaemonState = @import("DaemonState");
+const DaemonState = @import("vault_app").DaemonState;
 
 test "DaemonState mounts vault, writes/reads, and enqueues jobs" {
     const allocator = std.testing.allocator;
