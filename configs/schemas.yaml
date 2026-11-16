@@ -1,0 +1,88 @@
+version: 2
+
+# =============================================================================
+# Vault VFS Catalog Relational Schema Definitions
+# Managed by Parabellum `driver/sqlite` via `configs/pipeline.yaml`.
+# =============================================================================
+
+schemas:
+  catalog:
+    vfs_meta:
+      columns:
+        id:                         { type: int64, pk: true }
+        schema_version:             { type: int64, default: 1 }
+        vfs_epoch:                  { type: int64, default: 1 }
+        last_writer_device_id:      { type: text, default: "''" }
+        last_writer_sdk_semver:     { type: text, default: "'0.1.0'" }
+        last_observed_api_id:       { type: text, default: "'generic'" }
+        last_observed_api_revision: { type: text, default: "'1'" }
+
+    vault_key_slots:
+      columns:
+        slot_id:        { type: text, pk: true }
+        label:          { type: text }
+        kem_alg:        { type: text, default: "'MLKEM768-X25519'" }
+        aead_alg:       { type: text, default: "'XChaCha20-Poly1305'" }
+        public_key:     { type: blob }
+        kem_ciphertext: { type: blob }
+        vmk_wrapped:    { type: blob }
+        created_at:     { type: int64 }
+
+    storage_nodes:
+      columns:
+        node_id:                { type: text, pk: true }
+        credentials_wrapped:    { type: blob }
+        quota_limit_bytes:      { type: int64 }
+        quota_used_bytes:       { type: int64 }
+        catalog_headroom_bytes: { type: int64, default: 0 }
+        catalog_role:           { type: int64, default: 0 }
+        status:                 { type: int64, default: 0 }
+        last_quota_sync_at:     { type: int64 }
+
+    upload_leases:
+      columns:
+        lease_id:       { type: text, pk: true }
+        device_id:      { type: text }
+        node_id:        { type: text }
+        reserved_bytes: { type: int64 }
+        purpose:        { type: int64, default: 0 }
+        expires_at:     { type: int64 }
+
+    inodes:
+      columns:
+        inode_id:         { type: text, pk: true }
+        parent_id:        { type: text, nullable: true }
+        name:             { type: text }
+        kind:             { type: int64 }
+        logical_size:     { type: int64, default: 0 }
+        compression_mode: { type: text, default: "'auto'" }
+        file_dek_wrapped: { type: blob, nullable: true }
+        content_sha256:   { type: blob, nullable: true }
+        mime_type:        { type: text, nullable: true }
+        mtime:            { type: int64 }
+      indexes:
+        - parent_id
+
+    inode_extents:
+      columns:
+        extent_id:        { type: text, pk: true }
+        inode_id:         { type: text, ref: inodes.inode_id, on_delete: cascade }
+        part_index:       { type: int64 }
+        logical_offset:   { type: int64 }
+        logical_len:      { type: int64 }
+        node_id:          { type: text }
+        remote_object_id: { type: text }
+        remote_blob_name: { type: text }
+        physical_size:    { type: int64 }
+        phys_part_offset: { type: int64, default: 0 }
+        phys_part_len:    { type: int64, default: 0 }
+      indexes:
+        - inode_id
+
+    pending_gc:
+      columns:
+        gc_id:            { type: text, pk: true }
+        node_id:          { type: text }
+        remote_object_id: { type: text }
+        marked_at:        { type: int64 }
+

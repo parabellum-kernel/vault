@@ -17,7 +17,8 @@ pub fn build(b: *std.Build) void {
     const vfs_mod = libs_dep.module("vfs");
 
     // Task catalog shared library (`libvault.so`) loaded by Parabellum engine via pipeline.yaml.
-    // Zero compile-time dependency on `lib-gdrive` or `lib-gdrive-vfs` (configured dynamically).
+    // Zero compile-time dependency on `sqlite`, `lib-gdrive`, or `lib-gdrive-vfs`
+    // (managed by `driver/sqlite` + `configs/schemas.yaml` and `driver/gdrive_store` at runtime).
     const plugin_so = sdk_build.addTaskPlugin(b, sdk_dep, .{
         .name = "vault",
         .root_source_file = b.path("src/plugin.zig"),

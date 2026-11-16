@@ -2,5 +2,5 @@
 zig-out
 .env
 data/
-sa_keys/
-
+configs/sa_keys/
+configs/.env

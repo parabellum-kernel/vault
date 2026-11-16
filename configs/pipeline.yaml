@@ -17,11 +17,12 @@ datasources:
     role: source
     path: "${VAULT_CONFIG_PATH:-./configs/vault.yaml}"
 
-  # 2. Local CatalogPort backing (`sqlite` driver)
+  # 2. Local CatalogPort backing (`sqlite` driver + declarative schema)
   vfs_catalog_db:
     driver: sqlite
     role: duplex
     path: "${VAULT_DB_PATH:-./data/vault_catalog.db}"
+    schema: "${VAULT_SCHEMA_PATH:-./configs/schemas.yaml}"
 
   # 3. Google Drive storage driver (`libdriver_gdrive_store.so`, wraps `lib-gdrive-vfs`)
   gdrive_primary:
