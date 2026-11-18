@@ -1,5 +1,6 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
+const tika = @import("tika");
 const DaemonState = @import("../DaemonState.zig");
 const container = @import("../container.zig");
 
@@ -20,6 +21,7 @@ pub const StreamOutputs = struct {
     offset: i64,
     bytes_read: i64,
     content_range: []const u8,
+    mime_type: []const u8,
     data: []const u8,
 };
 
@@ -84,6 +86,7 @@ pub const StreamRangeService = struct {
                 .offset = 0,
                 .bytes_read = 0,
                 .content_range = try alloc.dupe(u8, "bytes */0"),
+                .mime_type = if (inode.mime_type) |m| try alloc.dupe(u8, m) else "application/octet-stream",
                 .data = "",
             };
         }
@@ -96,6 +99,12 @@ pub const StreamRangeService = struct {
         const exact = try alloc.realloc(buf, n);
         const actual_end = if (n == 0) pr.start else pr.start + n - 1;
         const content_range = try std.fmt.allocPrint(alloc, "bytes {d}-{d}/{d}", .{ pr.start, actual_end, total_size });
+        const resolved_mime = if (inode.mime_type) |m|
+            try alloc.dupe(u8, m)
+        else if (pr.start == 0)
+            tika.detect(exact).mime_type
+        else
+            "application/octet-stream";
 
         self.logger.info("Streamed {d} bytes ({s}) for '{s}'", .{ n, content_range, inputs.inode_id });
         return .{
@@ -104,6 +113,7 @@ pub const StreamRangeService = struct {
             .offset = @intCast(pr.start),
             .bytes_read = @intCast(n),
             .content_range = content_range,
+            .mime_type = resolved_mime,
             .data = exact,
         };
     }

@@ -179,6 +179,18 @@ pub fn writeFile(
     plaintext: []const u8,
     now_unix_s: i64,
 ) ![]u8 {
+    return self.writeFileWithMime(vault, partition_name, file_name, plaintext, null, now_unix_s);
+}
+
+pub fn writeFileWithMime(
+    self: *PartitionManager,
+    vault: *vfs.Vault,
+    partition_name: []const u8,
+    file_name: []const u8,
+    plaintext: []const u8,
+    mime_type: ?[]const u8,
+    now_unix_s: i64,
+) ![]u8 {
     const part = self.partitions.getPtr(partition_name) orelse return error.PartitionNotFound;
     const current_used = try self.usedBytes(vault, partition_name);
     if (current_used +| plaintext.len > part.quota_bytes) {
@@ -192,6 +204,7 @@ pub fn writeFile(
     };
     return vault.write(part.root_inode_id, file_name, plaintext, .{
         .upload_policy = pol.policy(),
+        .mime_type = mime_type,
     }, now_unix_s);
 }
 

@@ -5,6 +5,7 @@ const AppConfig = @import("config.zig").AppConfig;
 
 const task_abi = sdk.task;
 const task_sdk = sdk.task.sdk;
+const driver_abi = sdk.abi.driver;
 
 var global_state_lock: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
 var global_state: ?DaemonState = null;
@@ -31,7 +32,19 @@ pub fn getOrMountVault(state: *DaemonState, vault_id: []const u8, device_id: []c
     defer cfg.deinit(state.allocator);
 
     const effective_dev = if (std.mem.eql(u8, device_id, "vault-desktop-01")) cfg.device_id else device_id;
-    const entry = try state.createInMemoryVault(vault_id, effective_dev, 1700000000);
+    const entry = if (state.catalog_repo != null and state.blob_repo != null)
+        try state.mountConfiguredVault(
+            vault_id,
+            effective_dev,
+            cfg.device_key_path,
+            state.catalog_repo.?.handle,
+            state.catalog_repo.?.vtable,
+            state.blob_repo.?.handle,
+            state.blob_repo.?.vtable,
+            1700000000,
+        )
+    else
+        try state.createInMemoryVault(vault_id, effective_dev, 1700000000);
 
     // Provision configured logical partitions from configs/vault.yaml if mounting the configured vault.
     if (std.mem.eql(u8, vault_id, cfg.vault_id)) {
@@ -50,17 +63,59 @@ pub fn getOrMountVault(state: *DaemonState, vault_id: []const u8, device_id: []c
     return entry;
 }
 
+pub const ProgressReporter = struct {
+    raw_ctx: ?*task_abi.TaskContext_ABI = null,
+    report_fn: ?*const fn (ctx: *task_abi.TaskContext_ABI, done: u64, total: u64) callconv(.c) void = null,
+
+    pub fn report(self: ProgressReporter, done: u64, total: u64) void {
+        if (self.report_fn) |f| {
+            if (self.raw_ctx) |c| f(c, done, total);
+        }
+    }
+};
+
 /// Per-task DI Context injected into every `vault` `Service` via `VaultPluginContainer`.
 pub const VaultContext = struct {
     alloc: std.mem.Allocator = undefined,
     logger: task_abi.Logger = undefined,
     state: *DaemonState = undefined,
+    catalog_repo: ?DaemonState.RepoRef = null,
+    blob_repo: ?DaemonState.RepoRef = null,
+    local_fs_repo: ?DaemonState.RepoRef = null,
+    progress: ProgressReporter = .{},
+
+    fn resolveRepo(ctx: task_abi.TaskContext, id: [*:0]const u8) ?DaemonState.RepoRef {
+        const get_repo = ctx.raw.host.get_repository orelse return null;
+        var raw_handle: ?*anyopaque = null;
+        var raw_vtable: ?*const anyopaque = null;
+        if (get_repo(ctx.raw, id, &raw_handle, &raw_vtable) != .ok) return null;
+        const h = raw_handle orelse return null;
+        const v = raw_vtable orelse return null;
+        return .{
+            .handle = @ptrCast(@alignCast(h)),
+            .vtable = @ptrCast(@alignCast(v)),
+        };
+    }
 
     pub fn init(self: *VaultContext, alloc: std.mem.Allocator, ctx: task_abi.TaskContext) !void {
+        const state = acquireGlobalState();
+        const cat_repo = resolveRepo(ctx, "vfs_catalog_db");
+        const blob_repo = resolveRepo(ctx, "gdrive_primary");
+        const local_fs_repo = resolveRepo(ctx, "local_fs");
+        if (state.catalog_repo == null) state.catalog_repo = cat_repo;
+        if (state.blob_repo == null) state.blob_repo = blob_repo;
+
         self.* = .{
             .alloc = alloc,
             .logger = task_abi.Logger.init(ctx.raw),
-            .state = acquireGlobalState(),
+            .state = state,
+            .catalog_repo = cat_repo,
+            .blob_repo = blob_repo,
+            .local_fs_repo = local_fs_repo,
+            .progress = .{
+                .raw_ctx = ctx.raw,
+                .report_fn = ctx.raw.host.report_progress,
+            },
         };
     }
 

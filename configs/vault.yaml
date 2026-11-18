@@ -3,7 +3,8 @@ vault:
   id: "${VAULT_ID:-default}"
   device_id: "${VAULT_DEVICE_ID:-vault-desktop-01}"
   device_key_path: "${VAULT_DEVICE_KEY_PATH:-./data/device.key}"
-  sa_keys_dir: "${VAULT_SA_KEYS_DIR:-./sa_keys}"
+  user_key_path: "${VAULT_USER_KEY_PATH:-./configs/user_keys/oauth_user.json}"
+  #sa_keys_dir: "${VAULT_SA_KEYS_DIR:-./sa_keys}"
   bootstrap_cred: "${VAULT_BOOTSTRAP_CRED:-./sa_keys/vfs-sa-01.json}"
   upload_policy: most_available # most_available | first_fit | random | pinned
   read_cache_mb: 64

@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const vfs_mod = libs_dep.module("vfs");
+    const tika_mod = libs_dep.module("tika");
 
     // Task catalog shared library (`libvault.so`) loaded by Parabellum engine via pipeline.yaml.
     // Zero compile-time dependency on `sqlite`, `lib-gdrive`, or `lib-gdrive-vfs`
@@ -26,8 +27,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     plugin_so.root_module.addImport("vfs", vfs_mod);
+    plugin_so.root_module.addImport("tika", tika_mod);
     b.installArtifact(plugin_so);
 
+    // Optional standalone TUI / CLI client talking to the engine daemon over HTTP (`POST /v1/jobs`, `GET /v1/jobs`).
     const tui_exe = b.addExecutable(.{
         .name = "vault-tui",
         .root_module = b.createModule(.{
@@ -45,6 +48,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
             .{ .name = "vfs", .module = vfs_mod },
+            .{ .name = "tika", .module = tika_mod },
         },
     });
 
@@ -57,6 +61,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
                 .{ .name = "vfs", .module = vfs_mod },
+                .{ .name = "tika", .module = tika_mod },
                 .{ .name = "vault_app", .module = vault_app_mod },
             },
         }),

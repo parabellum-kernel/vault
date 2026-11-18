@@ -13,12 +13,13 @@ pub const GcOutputs = struct {
     deleted_blobs: i64,
 };
 
-pub const RunGcService = struct {
+pub const GcService = struct {
     state: *DaemonState,
     logger: Logger,
 
-    pub fn execute(self: *RunGcService, _: std.mem.Allocator, inputs: GcInputs) !GcOutputs {
+    pub fn execute(self: *GcService, _: std.mem.Allocator, inputs: GcInputs) !GcOutputs {
         const entry = try container.getOrMountVault(self.state, inputs.vault_id, "vault-desktop-01");
+        _ = try entry.vault.refresh();
         const n = try entry.vault.runGc();
         self.logger.info("GC deleted {d} blobs in vault '{s}'", .{ n, inputs.vault_id });
         return .{ .deleted_blobs = @intCast(n) };

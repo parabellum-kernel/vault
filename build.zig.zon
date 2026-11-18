@@ -1,6 +1,6 @@
 .{
     .name = .vault,
-    .version = "0.1.0",
+    .version = "0.2.0",
     .fingerprint = 0xff304921c39e50f2,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
@@ -8,7 +8,8 @@
             .path = "../sdk",
         },
         .parabellum_libs = .{
-            .path = "../lib",
+            .url = "git+https://github.com/parabellum-kernel/lib.git#v1.1.0",
+            .hash = "parabellum_libs-1.1.0-xPH3Yw9oEAAEqKcCpRpgDPqlHw6kGHcitpduzkL5A_L9",
         },
     },
     .paths = .{

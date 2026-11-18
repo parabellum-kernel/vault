@@ -9,11 +9,178 @@ extensions:
   inbound_http:
     host: "${VAULT_HOST:-127.0.0.1}"
     port: 8787
+  inbound_fs:
+    listen: "./data/sync_dir?partition=official_docs"
+  inbound_cli: {}
+
+datasources:
+  # 1. Vault & logical partitions config (standard `yaml` driver)
+  vault_config:
+    driver: yaml
+    role: source
+    path: "${VAULT_CONFIG_PATH:-./configs/vault.yaml}"
+
+  # 2. Local CatalogPort backing (`sqlite` driver + declarative schema)
+  vfs_catalog_db:
+    driver: sqlite
+    role: duplex
+    path: "${VAULT_DB_PATH:-./data/vault_catalog.db}"
+    schema: "${VAULT_SCHEMA_PATH:-./configs/schemas.yaml}"
+
+  # 3. Google Drive storage driver (`libdriver_gdrive_store.so`, wraps `lib-gdrive-vfs`)
+  gdrive_primary:
+    driver: gdrive_store
+    role: duplex
+    vault_id: "${VAULT_ID:-default}"
+    node_id: "${VAULT_NODE_ID:-user-01}"
+    credentials: "${VAULT_USER_KEY_PATH:-./configs/user_keys/oauth_user.json}"
+
+  # 4. Local filesystem source (`libdriver_file_store.so`)
+  local_fs:
+    driver: file_store
+    role: source
 
 modules:
   vault:
     path: "./zig-out/lib/libvault.so"
 
 pipelines:
+  bootstrap:
+    steps:
+      - id: mount_vault
+        uses: vault/vfs_mount
+        params:
+          op: init
+          vault_id: "${VAULT_ID:-default}"
+          device_id: "${VAULT_DEVICE_ID:-vault-desktop-01}"
+
   main:
-    steps: []
+    steps:
+      - id: list_root
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: ls
+          vault_id: "${VAULT_ID:-default}"
+
+  ls:
+    steps:
+      - id: list_dir
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: ls
+          vault_id: "${VAULT_ID:-default}"
+
+  quotas:
+    steps:
+      - id: get_quotas
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: quotas
+          vault_id: "${VAULT_ID:-default}"
+
+  metrics:
+    steps:
+      - id: get_metrics
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: metrics
+          vault_id: "${VAULT_ID:-default}"
+
+  refresh:
+    steps:
+      - id: refresh_catalog
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: refresh
+          vault_id: "${VAULT_ID:-default}"
+
+  search:
+    steps:
+      - id: search_catalog
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: search
+          vault_id: "${VAULT_ID:-default}"
+
+  mkdir:
+    steps:
+      - id: create_dir
+        uses: vault/vfs_catalog_write
+        from: jobs
+        params:
+          op: mkdir
+          vault_id: "${VAULT_ID:-default}"
+
+  rename:
+    steps:
+      - id: rename_node
+        uses: vault/vfs_catalog_write
+        from: jobs
+        params:
+          op: rename
+          vault_id: "${VAULT_ID:-default}"
+
+  delete:
+    steps:
+      - id: delete_node
+        uses: vault/vfs_catalog_write
+        from: jobs
+        params:
+          op: delete
+          vault_id: "${VAULT_ID:-default}"
+
+  upload:
+    steps:
+      - id: write_file
+        uses: vault/vfs_write
+        from: jobs
+        params:
+          op: file
+          vault_id: "${VAULT_ID:-default}"
+
+  upload_packed:
+    steps:
+      - id: write_packed
+        uses: vault/vfs_write
+        from: jobs
+        params:
+          op: packed
+          vault_id: "${VAULT_ID:-default}"
+
+  read:
+    steps:
+      - id: read_range
+        uses: vault/vfs_read
+        from: jobs
+        params:
+          op: range
+          vault_id: "${VAULT_ID:-default}"
+
+  gc:
+    steps:
+      - id: refresh_before_gc
+        uses: vault/vfs_catalog_read
+        from: jobs
+        params:
+          op: refresh
+          vault_id: "${VAULT_ID:-default}"
+      - id: sweep_blobs
+        uses: vault/vfs_gc
+        from: refresh_before_gc
+        params:
+          vault_id: "${VAULT_ID:-default}"
+
+  sync_diff:
+    steps:
+      - id: sync_file_diff
+        uses: vault/vfs_write
+        from: jobs
+        params:
+          op: file
+          vault_id: "${VAULT_ID:-default}"

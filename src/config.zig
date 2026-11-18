@@ -19,6 +19,7 @@ pub const AppConfig = struct {
     vault_id: []u8,
     device_id: []u8,
     device_key_path: []u8,
+    user_key_path: []u8,
     sa_keys_dir: []u8,
     bootstrap_cred: []u8,
     upload_policy: PartitionManager.PolicyKind = .most_available,
@@ -33,6 +34,7 @@ pub const AppConfig = struct {
             .vault_id = try allocator.dupe(u8, "default"),
             .device_id = try allocator.dupe(u8, "vault-desktop-01"),
             .device_key_path = try allocator.dupe(u8, "./data/device.key"),
+            .user_key_path = try allocator.dupe(u8, "./configs/user_keys/oauth_user.json"),
             .sa_keys_dir = try allocator.dupe(u8, "./configs/sa_keys"),
             .bootstrap_cred = try allocator.dupe(u8, "./configs/sa_keys/vfs-sa-01.json"),
         };
@@ -42,6 +44,7 @@ pub const AppConfig = struct {
         allocator.free(self.vault_id);
         allocator.free(self.device_id);
         allocator.free(self.device_key_path);
+        allocator.free(self.user_key_path);
         allocator.free(self.sa_keys_dir);
         allocator.free(self.bootstrap_cred);
         for (self.partitions) |*p| p.deinit(allocator);
@@ -154,6 +157,9 @@ pub const AppConfig = struct {
                     } else if (std.mem.eql(u8, k, "device_key_path")) {
                         allocator.free(cfg.device_key_path);
                         cfg.device_key_path = try allocator.dupe(u8, v);
+                    } else if (std.mem.eql(u8, k, "user_key_path")) {
+                        allocator.free(cfg.user_key_path);
+                        cfg.user_key_path = try allocator.dupe(u8, v);
                     } else if (std.mem.eql(u8, k, "sa_keys_dir")) {
                         allocator.free(cfg.sa_keys_dir);
                         cfg.sa_keys_dir = try allocator.dupe(u8, v);
