@@ -8,8 +8,7 @@
             .path = "../sdk",
         },
         .parabellum_libs = .{
-            .url = "git+https://github.com/parabellum-kernel/lib.git#v1.3.1",
-            .hash = "parabellum_libs-1.3.1-xPH3Yw9oEAAwlEUKZ1F0MQsSyGayucJWessR8QTrUAVI",
+            .path = "../lib",
         },
     },
     .paths = .{

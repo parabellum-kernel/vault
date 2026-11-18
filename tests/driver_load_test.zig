@@ -5,7 +5,6 @@ test "inspect driver manifests" {
     const paths = [_][]const u8{
         "/home/ubuntu/.gemini/antigravity/scratch/parabellum/driver/zig-out/lib/libdriver_yaml.so",
         "/home/ubuntu/.gemini/antigravity/scratch/parabellum/driver/zig-out/lib/libdriver_sqlite.so",
-        "/home/ubuntu/.gemini/antigravity/scratch/parabellum/driver/zig-out/lib/libdriver_gdrive_store.so",
     };
     for (paths) |p| {
         var lib = try std.DynLib.open(p);

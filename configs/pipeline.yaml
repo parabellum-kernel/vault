@@ -27,10 +27,11 @@ datasources:
     path: "${VAULT_DB_PATH:-./data/vault_catalog.db}"
     schema: "${VAULT_SCHEMA_PATH:-./configs/schemas.yaml}"
 
-  # 3. Google Drive storage driver (`libdriver_gdrive_store.so`, wraps `lib-gdrive-vfs`)
+  # 3. Google Drive storage datasource (Declarative REST API client via configs/api.gdrive.yaml)
   gdrive_primary:
-    driver: gdrive_store
+    driver: rest_api
     role: duplex
+    spec: "${VAULT_APIS_PATH:-./configs/api.gdrive.yaml}#gdrive_v3"
     vault_id: "${VAULT_ID:-default}"
     node_id: "${VAULT_NODE_ID:-user-01}"
     credentials: "${VAULT_USER_KEY_PATH:-./configs/user_keys/oauth_user.json}"

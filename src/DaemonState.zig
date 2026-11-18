@@ -2,8 +2,8 @@ const std = @import("std");
 const sdk = @import("parabellum_sdk");
 const vfs = @import("vfs");
 const PartitionManager = @import("PartitionManager.zig");
-const RepoCatalogAdapter = @import("RepoCatalogAdapter.zig").RepoCatalogAdapter;
-const RepoBlobStoreAdapter = @import("RepoBlobStoreAdapter.zig").RepoBlobStoreAdapter;
+const RepoCatalogAdapter = vfs.RepoCatalogAdapter(sdk.abi);
+const RepoBlobStoreAdapter = vfs.RepoBlobStoreAdapter(sdk.abi);
 const abi = sdk.abi;
 
 /// Central in-process state owned by the Vault Daemon (`ARCH-037D`).

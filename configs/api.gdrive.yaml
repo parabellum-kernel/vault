@@ -1,0 +1,126 @@
+version: 2
+id: gdrive_v3
+base_url: "https://www.googleapis.com"
+headers:
+  Accept: "application/json"
+auth:
+  type: oauth2_credentials
+  scope: "https://www.googleapis.com/auth/drive"
+
+endpoints:
+  get_quota:
+    method: GET
+    path: "/drive/v3/about"
+    query:
+      fields: "storageQuota(limit,usage)"
+    response:
+      format: json
+      mapping:
+        limit_bytes: { path: "$.storageQuota.limit", type: uint64, default: "18446744073709551615" }
+        used_bytes:  { path: "$.storageQuota.usage", type: uint64, default: "0" }
+
+  discover_catalog:
+    method: GET
+    path: "/drive/v3/files"
+    query:
+      q: "appProperties has { key='vfs_role' and value='catalog' } and appProperties has { key='vfs_id' and value='{vault_id}' } and trashed=false"
+      includeItemsFromAllDrives: "true"
+      supportsAllDrives: "true"
+      fields: "files(id,name,version,size,appProperties)"
+    response:
+      format: json
+      root_path: "$.files"
+      mapping:
+        object_id: { path: "$.id", type: text }
+        name:      { path: "$.name", type: text }
+
+  get_object:
+    method: GET
+    path: "/drive/v3/files/{object_id}"
+    query:
+      alt: "media"
+      supportsAllDrives: "true"
+    headers:
+      Accept-Encoding: "identity"
+    response:
+      format: bytes
+      mapping:
+        data: { source: body_bytes, type: bytes }
+        etag: { source: header, expr: "ETag", type: text }
+
+  get_range:
+    method: GET
+    path: "/drive/v3/files/{object_id}"
+    query:
+      alt: "media"
+      supportsAllDrives: "true"
+    headers:
+      Range: "bytes={offset}-{end}"
+      Accept-Encoding: "identity"
+    response:
+      format: bytes
+      success_status: [200, 206]
+      mapping:
+        data: { source: body_bytes, type: bytes }
+
+  put_object:
+    method: POST
+    path: "https://www.googleapis.com/upload/drive/v3/files"
+    query:
+      uploadType: "multipart"
+      supportsAllDrives: "true"
+      fields: "id,name,version,size"
+    request:
+      format: multipart_related
+      body_template: '{"name":"{name}"}'
+    response:
+      format: json
+      success_status: [200, 201]
+      mapping:
+        object_id: { path: "$.id", type: text }
+        etag:      { source: header, expr: "ETag", type: text }
+
+  put_catalog:
+    method: POST
+    path: "https://www.googleapis.com/upload/drive/v3/files"
+    query:
+      uploadType: "multipart"
+      supportsAllDrives: "true"
+      fields: "id,name,version,size,appProperties"
+    request:
+      format: multipart_related
+      body_template: '{"name":"{name}","appProperties":{"vfs_role":"catalog","vfs_id":"{vault_id}"}}'
+    response:
+      format: json
+      success_status: [200, 201]
+      mapping:
+        object_id: { path: "$.id", type: text }
+        etag:      { source: header, expr: "ETag", type: text }
+
+  update_object:
+    method: PATCH
+    path: "https://www.googleapis.com/upload/drive/v3/files/{object_id}"
+    query:
+      uploadType: "multipart"
+      supportsAllDrives: "true"
+      fields: "id,name,version,size"
+    headers:
+      If-Match: "{expected_etag}"
+    request:
+      format: multipart_related
+      body_template: "{}"
+    response:
+      format: json
+      success_status: [200, 201]
+      mapping:
+        object_id: { path: "$.id", type: text }
+        etag:      { source: header, expr: "ETag", type: text }
+
+  delete_object:
+    method: DELETE
+    path: "/drive/v3/files/{object_id}"
+    query:
+      supportsAllDrives: "true"
+    response:
+      format: empty
+      success_status: [200, 204]
