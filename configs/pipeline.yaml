@@ -4,6 +4,13 @@ runtime:
   workers: 4
   scheduler: dag
   routing: type_driven
+  default_network: egress_net
+
+networks:
+  egress_net:
+    driver: egress
+    policy:
+      default_action: allow
 
 extensions:
   inbound_http:
@@ -31,6 +38,7 @@ datasources:
   gdrive_primary:
     driver: rest_api
     role: duplex
+    network: egress_net
     spec: "${VAULT_APIS_PATH:-./configs/api.gdrive.yaml}#gdrive_v3"
     vault_id: "${VAULT_ID:-default}"
     node_id: "${VAULT_NODE_ID:-user-01}"
