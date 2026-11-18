@@ -1,6 +1,6 @@
 .{
     .name = .vault,
-    .version = "2.0.0",
+    .version = "2.0.1",
     .fingerprint = 0xff304921c39e50f2,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
