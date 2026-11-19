@@ -19,7 +19,7 @@ pub const WriteDataService = task_write.WriteDataService;
 pub const ReadDataService = task_read.ReadDataService;
 pub const GcService = task_gc.GcService;
 
-pub const tasks = [_]abi.TaskDescriptor_ABI{
+pub const tasks = [_]sdk.abi.task.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(MountService, .{ .name = "vfs_mount" }),
     VaultPluginContainer.defineTaskService(CatalogReadService, .{ .name = "vfs_catalog_read" }),
     VaultPluginContainer.defineTaskService(CatalogWriteService, .{ .name = "vfs_catalog_write" }),
@@ -28,8 +28,8 @@ pub const tasks = [_]abi.TaskDescriptor_ABI{
     VaultPluginContainer.defineTaskService(GcService, .{ .name = "vfs_gc" }),
 };
 
-pub const manifest: abi.ModuleManifest_ABI = .{
-    .abi_version = abi.ABI_VERSION,
+pub const manifest: sdk.abi.task.ModuleManifest_ABI = .{
+    .abi_version = sdk.abi.task.ABI_VERSION,
     .module_name = "vault",
     .module_version = .{ .major = 0, .minor = 2, .patch = 0 },
     .tasks_ptr = &tasks,

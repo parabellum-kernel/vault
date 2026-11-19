@@ -3,8 +3,8 @@ const sdk = @import("parabellum_sdk");
 const DaemonState = @import("DaemonState.zig");
 const AppConfig = @import("config.zig").AppConfig;
 
-const task_abi = sdk.task;
-const task_sdk = sdk.task.sdk;
+const task_abi = sdk.abi.task;
+const task_sdk = sdk.task;
 const driver_abi = sdk.abi.driver;
 
 var global_state_lock: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
@@ -77,14 +77,14 @@ pub const ProgressReporter = struct {
 /// Per-task DI Context injected into every `vault` `Service` via `VaultPluginContainer`.
 pub const VaultContext = struct {
     alloc: std.mem.Allocator = undefined,
-    logger: task_abi.Logger = undefined,
+    logger: task_sdk.Logger = undefined,
     state: *DaemonState = undefined,
     catalog_repo: ?DaemonState.RepoRef = null,
     blob_repo: ?DaemonState.RepoRef = null,
     local_fs_repo: ?DaemonState.RepoRef = null,
     progress: ProgressReporter = .{},
 
-    fn resolveRepo(ctx: task_abi.TaskContext, id: [*:0]const u8) ?DaemonState.RepoRef {
+    fn resolveRepo(ctx: task_sdk.TaskContext, id: [*:0]const u8) ?DaemonState.RepoRef {
         const get_repo = ctx.raw.host.get_repository orelse return null;
         var raw_handle: ?*anyopaque = null;
         var raw_vtable: ?*const anyopaque = null;
@@ -97,7 +97,7 @@ pub const VaultContext = struct {
         };
     }
 
-    pub fn init(self: *VaultContext, alloc: std.mem.Allocator, ctx: task_abi.TaskContext) !void {
+    pub fn init(self: *VaultContext, alloc: std.mem.Allocator, ctx: task_sdk.TaskContext) !void {
         const state = acquireGlobalState();
         const cat_repo = resolveRepo(ctx, "vfs_catalog_db");
         const blob_repo = resolveRepo(ctx, "gdrive_primary");
@@ -107,7 +107,7 @@ pub const VaultContext = struct {
 
         self.* = .{
             .alloc = alloc,
-            .logger = task_abi.Logger.init(ctx.raw),
+            .logger = task_sdk.Logger.init(ctx.raw),
             .state = state,
             .catalog_repo = cat_repo,
             .blob_repo = blob_repo,
