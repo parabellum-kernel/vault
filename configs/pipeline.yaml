@@ -13,12 +13,17 @@ networks:
       default_action: allow
 
 extensions:
-  inbound_http:
-    host: "${VAULT_HOST:-127.0.0.1}"
-    port: 8787
   inbound_fs:
     listen: "./data/sync_dir?partition=official_docs"
   inbound_cli: {}
+  tui_inbound: {}
+  opentelemetry:
+    file: "${OTEL_EXPORTER_FILE_PATH:-./data/output/logs/otel_export.json}"
+    console: "${OTEL_LOG_CONSOLE:-false}"
+  trace_jsonl:
+    file: "${PARABELLUM_TRACE_OUT:-./data/output/logs/trace.jsonl}"
+
+capabilities: ./configs/capabilities.yaml
 
 datasources:
   # 1. Vault & logical partitions config (standard `yaml` driver)
@@ -170,6 +175,25 @@ pipelines:
         params:
           op: range
           vault_id: "${VAULT_ID:-default}"
+
+  open:
+    steps:
+      - id: open_external
+        uses: vault/vfs_read
+        from: jobs
+        params:
+          op: open
+          vault_id: "${VAULT_ID:-default}"
+
+  stream_play:
+    steps:
+      - id: stream_to_player
+        uses: vault/vfs_read
+        from: jobs
+        params:
+          op: stream_play
+          vault_id: "${VAULT_ID:-default}"
+          mime_handlers: "video/*=mpv -;audio/*=mpv -;default=xdg-open"
 
   gc:
     steps:

@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
-const DaemonState = @import("../DaemonState.zig");
+const VaultState = @import("../VaultState.zig");
 const container = @import("../container.zig");
 
 const Logger = sdk.task.Logger;
@@ -14,7 +14,7 @@ pub const GcOutputs = struct {
 };
 
 pub const GcService = struct {
-    state: *DaemonState,
+    state: *VaultState,
     logger: Logger,
 
     pub fn execute(self: *GcService, _: std.mem.Allocator, inputs: GcInputs) !GcOutputs {

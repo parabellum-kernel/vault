@@ -30,17 +30,6 @@ pub fn build(b: *std.Build) void {
     plugin_so.root_module.addImport("tika", tika_mod);
     b.installArtifact(plugin_so);
 
-    // Optional standalone TUI / CLI client talking to the engine daemon over HTTP (`POST /v1/jobs`, `GET /v1/jobs`).
-    const tui_exe = b.addExecutable(.{
-        .name = "vault-tui",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/tui/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    b.installArtifact(tui_exe);
-
     const vault_app_mod = b.createModule(.{
         .root_source_file = b.path("src/root.zig"),
         .target = target,

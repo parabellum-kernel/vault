@@ -28,12 +28,17 @@ zig build
 
 chmod 755 "$VAULT_ROOT"/zig-out/lib/*.so 2>/dev/null || true
 
-CMD="${1:-run}"
-if [[ "$CMD" == "serve" || "$CMD" == "-s" || "$CMD" == "--serve" ]]; then
+CMD="${1:-tui}"
+if [[ "$CMD" == "tui" || "$CMD" == "-t" || "$CMD" == "--tui" || "$CMD" == "serve" || "$CMD" == "-s" || "$CMD" == "--serve" ]]; then
     shift || true
-    echo "==> Starting Parabellum daemon with '$PIPELINE'..."
-    exec "$ENGINE_BIN" --plugin-dir "$PARABELLUM_PLUGIN_DIR" \
-        --serve --pipeline "$PIPELINE" "$@"
+    DB_PATH="${VAULT_DB_PATH:-$VAULT_ROOT/data/vault_catalog.db}"
+    cleanup_db() {
+        rm -f "$DB_PATH" "${DB_PATH}-wal" "${DB_PATH}-shm"
+    }
+    trap cleanup_db EXIT INT TERM
+    echo "==> Starting Parabellum Engine with TUI ('$PIPELINE')..."
+    "$ENGINE_BIN" --plugin-dir "$PARABELLUM_PLUGIN_DIR" \
+        --serve --transport tui --pipeline "$PIPELINE" "$@"
 elif [[ "$CMD" == "validate" || "$CMD" == "-v" || "$CMD" == "--validate" ]]; then
     shift || true
     echo "==> Validating pipeline '$PIPELINE'..."

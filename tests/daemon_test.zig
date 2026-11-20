@@ -1,11 +1,11 @@
 const std = @import("std");
-const DaemonState = @import("vault_app").DaemonState;
+const VaultState = @import("vault_app").VaultState;
 
-test "DaemonState mounts vault, writes/reads, and enqueues jobs" {
+test "VaultState mounts vault and writes/reads partitions" {
     const allocator = std.testing.allocator;
     const io = std.testing.io;
 
-    var state = DaemonState.init(allocator, io);
+    var state = VaultState.init(allocator, io);
     defer state.deinit();
 
     const entry = try state.createInMemoryVault("default", "vault-test", 1700000000);
@@ -15,10 +15,6 @@ test "DaemonState mounts vault, writes/reads, and enqueues jobs" {
     var out: [20]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 20), try entry.vault.readAt(id, 0, &out));
     try std.testing.expectEqualStrings("vault daemon payload", &out);
-
-    const job_id = try state.enqueueJob("default", .sync, "/docs", 1700000020);
-    try std.testing.expectEqual(@as(u64, 1), job_id);
-    try std.testing.expectEqual(@as(usize, 1), state.jobs.items.len);
 
     // Logical partitions: 10-byte cap -> first write succeeds, second fails, resize to 64 -> succeeds
     try entry.partitions.createPartition(

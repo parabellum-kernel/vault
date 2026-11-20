@@ -1,7 +1,7 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
 const tika = @import("tika");
-const DaemonState = @import("../DaemonState.zig");
+const VaultState = @import("../VaultState.zig");
 const container = @import("../container.zig");
 
 const Logger = sdk.task.Logger;
@@ -69,7 +69,7 @@ pub fn parseHttpRange(range_header: []const u8, total_size: u64, max_chunk: u64)
 }
 
 pub const StreamRangeService = struct {
-    state: *DaemonState,
+    state: *VaultState,
     logger: Logger,
 
     pub fn execute(self: *StreamRangeService, alloc: std.mem.Allocator, inputs: StreamInputs) !StreamOutputs {

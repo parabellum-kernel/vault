@@ -2,7 +2,7 @@ const std = @import("std");
 const sdk = @import("parabellum_sdk");
 const vfs = @import("vfs");
 const tika = @import("tika");
-const DaemonState = @import("../DaemonState.zig");
+const VaultState = @import("../VaultState.zig");
 const container = @import("../container.zig");
 
 const Logger = sdk.task.Logger;
@@ -26,9 +26,9 @@ pub const WriteDataOutputs = struct {
 };
 
 pub const WriteDataService = struct {
-    state: *DaemonState,
+    state: *VaultState,
     logger: Logger,
-    local_fs_repo: ?DaemonState.RepoRef = null,
+    local_fs_repo: ?VaultState.RepoRef = null,
     progress: container.ProgressReporter = .{},
 
     const PackedItem = struct {

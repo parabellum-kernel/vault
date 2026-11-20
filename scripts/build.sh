@@ -11,7 +11,6 @@ TARGET_DIR="$VAULT_ROOT/zig-out/lib"
 mkdir -p "$TARGET_DIR"
 
 COMPONENTS=(
-    "$PARABELLUM_ROOT/lib-gdrive-vfs"
     "$PARABELLUM_ROOT/driver"
     "$PARABELLUM_ROOT/extension"
 )

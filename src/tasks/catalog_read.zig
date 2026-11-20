@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
-const DaemonState = @import("../DaemonState.zig");
+const VaultState = @import("../VaultState.zig");
 const container = @import("../container.zig");
 
 const Logger = sdk.task.Logger;
@@ -19,7 +19,7 @@ pub const CatalogReadOutputs = struct {
 };
 
 pub const CatalogReadService = struct {
-    state: *DaemonState,
+    state: *VaultState,
     logger: Logger,
 
     pub fn execute(self: *CatalogReadService, alloc: std.mem.Allocator, inputs: CatalogReadInputs) !CatalogReadOutputs {
@@ -40,8 +40,8 @@ pub const CatalogReadService = struct {
             const rc = &entry.vault.session.range_cache;
             const json = try std.fmt.allocPrint(
                 alloc,
-                "{{\"cache_hits\":{d},\"cache_misses\":{d},\"cache_bytes\":{d},\"partition_count\":{d},\"job_count\":{d}}}",
-                .{ rc.hits, rc.misses, rc.current_bytes, entry.partitions.partitions.count(), self.state.jobs.items.len },
+                "{{\"cache_hits\":{d},\"cache_misses\":{d},\"cache_bytes\":{d},\"partition_count\":{d},\"mounted_vaults\":{d}}}",
+                .{ rc.hits, rc.misses, rc.current_bytes, entry.partitions.partitions.count(), self.state.vaults.count() },
             );
             return .{ .op = "metrics", .count = 1, .data_json = json };
         }

@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
-const DaemonState = @import("DaemonState.zig");
+const VaultState = @import("VaultState.zig");
 const AppConfig = @import("config.zig").AppConfig;
 
 const task_abi = sdk.abi.task;
@@ -8,14 +8,20 @@ const task_sdk = sdk.task;
 const driver_abi = sdk.abi.driver;
 
 var global_state_lock: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
-var global_state: ?DaemonState = null;
+var global_threaded_io: ?std.Io.Threaded = null;
+var global_state: ?VaultState = null;
 
-pub fn acquireGlobalState() *DaemonState {
+pub fn acquireGlobalState() *VaultState {
     while (global_state_lock.cmpxchgWeak(false, true, .acquire, .monotonic) != null) {}
+    if (global_threaded_io == null) {
+        global_threaded_io = std.Io.Threaded.init(std.heap.c_allocator, .{
+            .environ = .{ .block = .{ .slice = std.mem.span(std.c.environ) } },
+        });
+    }
     if (global_state == null) {
-        global_state = DaemonState.init(
+        global_state = VaultState.init(
             std.heap.c_allocator,
-            std.Io.Threaded.global_single_threaded.io(),
+            global_threaded_io.?.io(),
         );
     }
     return &global_state.?;
@@ -25,7 +31,7 @@ pub fn releaseGlobalState() void {
     global_state_lock.store(false, .release);
 }
 
-pub fn getOrMountVault(state: *DaemonState, vault_id: []const u8, device_id: []const u8) !*DaemonState.VaultEntry {
+pub fn getOrMountVault(state: *VaultState, vault_id: []const u8, device_id: []const u8) !*VaultState.VaultEntry {
     if (state.getVault(vault_id)) |existing| return existing;
 
     var cfg = try AppConfig.load(state.allocator, state.io, "configs/.env", "configs/vault.yaml");
@@ -78,13 +84,13 @@ pub const ProgressReporter = struct {
 pub const VaultContext = struct {
     alloc: std.mem.Allocator = undefined,
     logger: task_sdk.Logger = undefined,
-    state: *DaemonState = undefined,
-    catalog_repo: ?DaemonState.RepoRef = null,
-    blob_repo: ?DaemonState.RepoRef = null,
-    local_fs_repo: ?DaemonState.RepoRef = null,
+    state: *VaultState = undefined,
+    catalog_repo: ?VaultState.RepoRef = null,
+    blob_repo: ?VaultState.RepoRef = null,
+    local_fs_repo: ?VaultState.RepoRef = null,
     progress: ProgressReporter = .{},
 
-    fn resolveRepo(ctx: task_sdk.TaskContext, id: [*:0]const u8) ?DaemonState.RepoRef {
+    fn resolveRepo(ctx: task_sdk.TaskContext, id: [*:0]const u8) ?VaultState.RepoRef {
         const get_repo = ctx.raw.host.get_repository orelse return null;
         var raw_handle: ?*anyopaque = null;
         var raw_vtable: ?*const anyopaque = null;

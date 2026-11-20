@@ -1,4 +1,4 @@
-pub const DaemonState = @import("DaemonState.zig");
+pub const VaultState = @import("VaultState.zig");
 pub const PartitionManager = @import("PartitionManager.zig");
 pub const env = @import("env.zig");
 pub const config = @import("config.zig");

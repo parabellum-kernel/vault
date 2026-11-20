@@ -6,26 +6,9 @@ const RepoCatalogAdapter = vfs.RepoCatalogAdapter(sdk.abi);
 const RepoBlobStoreAdapter = vfs.RepoBlobStoreAdapter(sdk.abi);
 const abi = sdk.abi;
 
-/// Central in-process state owned by the Vault Daemon (`ARCH-037D`).
-/// Holds all open `vfs.Vault` instances and the asynchronous job queue.
-const DaemonState = @This();
-
-pub const JobKind = enum { upload, download, sync, gc };
-pub const JobStatus = enum { queued, running, completed, failed };
-
-pub const Job = struct {
-    id: u64,
-    vault_id: []u8,
-    kind: JobKind,
-    status: JobStatus = .queued,
-    target_path: []u8,
-    created_at: i64,
-
-    pub fn deinit(self: *Job, allocator: std.mem.Allocator) void {
-        allocator.free(self.vault_id);
-        allocator.free(self.target_path);
-    }
-};
+/// Central in-process state shared across `vault` task invocations.
+/// Holds all open `vfs.Vault` instances and partition managers.
+const VaultState = @This();
 
 pub const VaultEntry = struct {
     vault: vfs.Vault,
@@ -53,17 +36,15 @@ io: std.Io,
 catalog_repo: ?RepoRef = null,
 blob_repo: ?RepoRef = null,
 vaults: std.StringHashMapUnmanaged(*VaultEntry) = .empty,
-jobs: std.ArrayListUnmanaged(Job) = .empty,
-next_job_id: u64 = 1,
 
-pub fn init(allocator: std.mem.Allocator, io: std.Io) DaemonState {
+pub fn init(allocator: std.mem.Allocator, io: std.Io) VaultState {
     return .{
         .allocator = allocator,
         .io = io,
     };
 }
 
-pub fn deinit(self: *DaemonState) void {
+pub fn deinit(self: *VaultState) void {
     var it = self.vaults.iterator();
     while (it.next()) |e| {
         self.allocator.free(e.key_ptr.*);
@@ -71,14 +52,11 @@ pub fn deinit(self: *DaemonState) void {
         self.allocator.destroy(e.value_ptr.*);
     }
     self.vaults.deinit(self.allocator);
-
-    for (self.jobs.items) |*j| j.deinit(self.allocator);
-    self.jobs.deinit(self.allocator);
 }
 
-/// Creates and mounts an in-memory demo/local vault inside the daemon.
+/// Creates and mounts an in-memory demo/local vault inside the process.
 pub fn createInMemoryVault(
-    self: *DaemonState,
+    self: *VaultState,
     vault_id: []const u8,
     device_id: []const u8,
     now_unix_s: i64,
@@ -125,7 +103,7 @@ pub fn createInMemoryVault(
 /// Loads or generates+persists `device.key` at `device_key_path`, then attempts `Vault.open`
 /// or falls back to `Vault.create` if the vault is new.
 pub fn mountConfiguredVault(
-    self: *DaemonState,
+    self: *VaultState,
     vault_id: []const u8,
     device_id: []const u8,
     device_key_path: []const u8,
@@ -240,33 +218,7 @@ fn loadOrCreateDeviceKey(io: std.Io, path: []const u8) !vfs.Crypto.HybridKem.Key
     return kp;
 }
 
-pub fn getVault(self: *DaemonState, vault_id: []const u8) ?*VaultEntry {
+pub fn getVault(self: *VaultState, vault_id: []const u8) ?*VaultEntry {
     return self.vaults.get(vault_id);
-}
-
-pub fn enqueueJob(
-    self: *DaemonState,
-    vault_id: []const u8,
-    kind: JobKind,
-    target_path: []const u8,
-    now_unix_s: i64,
-) !u64 {
-    const id = self.next_job_id;
-    self.next_job_id += 1;
-
-    const vid = try self.allocator.dupe(u8, vault_id);
-    errdefer self.allocator.free(vid);
-    const tp = try self.allocator.dupe(u8, target_path);
-    errdefer self.allocator.free(tp);
-
-    try self.jobs.append(self.allocator, .{
-        .id = id,
-        .vault_id = vid,
-        .kind = kind,
-        .status = .queued,
-        .target_path = tp,
-        .created_at = now_unix_s,
-    });
-    return id;
 }
 

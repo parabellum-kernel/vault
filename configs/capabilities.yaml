@@ -1,0 +1,242 @@
+id: vault
+name: Parabellum Vault
+version: "2.0.2"
+
+capabilities:
+  - id: ls
+    group: vfs
+    title: List Directory
+    target_kind: pipeline
+    target: ls
+    execution_mode: sync_fast
+    inputs:
+      - name: parent_id
+        label: Parent Inode ID
+        field_type: text
+        required: false
+        default_value: ""
+    output:
+      kind: table
+    actions:
+      - label: Open Directory
+        capability_id: ls
+        condition_field: kind
+        condition_equals: dir
+        param_map:
+          - target_input: parent_id
+            source_field: inode_id
+      - label: Upload File Here
+        capability_id: upload
+        condition_field: kind
+        condition_equals: dir
+        param_map:
+          - target_input: parent_id
+            source_field: inode_id
+      - label: Create Subdirectory
+        capability_id: mkdir
+        condition_field: kind
+        condition_equals: dir
+        param_map:
+          - target_input: parent_id
+            source_field: inode_id
+      - label: Download & Open (xdg-open)
+        capability_id: open
+        condition_field: kind
+        condition_equals: file
+        param_map:
+          - target_input: inode_id
+            source_field: inode_id
+      - label: Stream to xdg-open
+        capability_id: stream_play
+        condition_field: kind
+        condition_equals: file
+        param_map:
+          - target_input: inode_id
+            source_field: inode_id
+      - label: Delete
+        capability_id: delete
+        param_map:
+          - target_input: inode_id
+            source_field: inode_id
+
+  - id: search
+    group: vfs
+    title: Search Files
+    target_kind: pipeline
+    target: search
+    execution_mode: sync_fast
+    inputs:
+      - name: query
+        label: Search Query
+        field_type: text
+        required: true
+    output:
+      kind: table
+    actions:
+      - label: Download & Open (xdg-open)
+        capability_id: open
+        condition_field: kind
+        condition_equals: file
+        param_map:
+          - target_input: inode_id
+            source_field: inode_id
+      - label: Stream to Handler
+        capability_id: stream_play
+        condition_field: kind
+        condition_equals: file
+        param_map:
+          - target_input: inode_id
+            source_field: inode_id
+
+  - id: mkdir
+    group: vfs
+    title: Create Directory
+    target_kind: pipeline
+    target: mkdir
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: name
+        label: Directory Name
+        field_type: text
+        required: true
+      - name: parent_id
+        label: Parent Inode ID
+        field_type: text
+        required: false
+    output:
+      kind: record
+
+  - id: rename
+    group: vfs
+    title: Rename Node
+    target_kind: pipeline
+    target: rename
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+      - name: name
+        label: New Name
+        field_type: text
+        required: true
+    output:
+      kind: record
+
+  - id: delete
+    group: vfs
+    title: Delete Node
+    target_kind: pipeline
+    target: delete
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+    output:
+      kind: record
+
+  - id: upload
+    group: transfer
+    title: Upload File
+    target_kind: pipeline
+    target: upload
+    execution_mode: async_job
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: path
+        label: Local File Path
+        field_type: file_path
+        required: true
+      - name: name
+        label: Remote Name
+        field_type: text
+        required: false
+      - name: parent_id
+        label: Parent Inode ID
+        field_type: text
+        required: false
+    output:
+      kind: record
+
+  - id: open
+    group: transfer
+    title: Download & Open (xdg-open)
+    target_kind: pipeline
+    target: open
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+    output:
+      kind: record
+
+  - id: stream_play
+    group: transfer
+    title: Stream to Handler
+    target_kind: pipeline
+    target: stream_play
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+      - name: command
+        label: Command Override
+        field_type: text
+        required: false
+        default_value: ""
+    output:
+      kind: record
+
+  - id: quotas
+    group: system
+    title: Pool Quotas
+    target_kind: pipeline
+    target: quotas
+    execution_mode: sync_fast
+    output:
+      kind: record
+
+  - id: metrics
+    group: system
+    title: Vault Metrics
+    target_kind: pipeline
+    target: metrics
+    execution_mode: sync_fast
+    output:
+      kind: record
+
+  - id: refresh
+    group: system
+    title: Refresh Catalog
+    target_kind: pipeline
+    target: refresh
+    execution_mode: async_job
+    output:
+      kind: record
+
+  - id: gc
+    group: system
+    title: Garbage Collector
+    target_kind: pipeline
+    target: gc
+    execution_mode: async_job
+    output:
+      kind: record

@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdk = @import("parabellum_sdk");
-const DaemonState = @import("../DaemonState.zig");
+const VaultState = @import("../VaultState.zig");
 const PartitionManager = @import("../PartitionManager.zig");
 const container = @import("../container.zig");
 
@@ -22,7 +22,7 @@ pub const MountOutputs = struct {
 };
 
 pub const MountService = struct {
-    state: *DaemonState,
+    state: *VaultState,
     logger: Logger,
 
     pub fn execute(self: *MountService, alloc: std.mem.Allocator, inputs: MountInputs) !MountOutputs {
