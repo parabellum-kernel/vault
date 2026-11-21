@@ -6,3 +6,4 @@ data/
 configs/sa_keys/
 configs/user_keys/
 configs/.env
+.DS_Store
