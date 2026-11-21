@@ -14,6 +14,7 @@ pub const WriteDataInputs = struct {
     parent_id: []const u8 = "",
     name: []const u8 = "",
     data: []const u8 = "",
+    path: []const u8 = "",
     source_path: []const u8 = "",
     /// JSON array of `{"name":"...","data":"..."}` objects when `op == "packed"`.
     files_json: []const u8 = "",
@@ -79,17 +80,19 @@ pub const WriteDataService = struct {
             };
         }
 
-        // Single file upload: supports inline data, "base64:...", or reading from `source_path`.
+        // Single file upload: supports inline data, "base64:...", or reading from `source_path`/`path`.
         var owned_buf: ?[]u8 = null;
         defer if (owned_buf) |b| alloc.free(b);
 
-        const raw_bytes: []const u8 = if (inputs.source_path.len > 0) blk: {
+        const local_path = if (inputs.source_path.len > 0) inputs.source_path else inputs.path;
+
+        const raw_bytes: []const u8 = if (local_path.len > 0) blk: {
             if (self.local_fs_repo) |fs_repo| {
                 if (fs_repo.vtable.read_stream) |read_fn| {
                     var iter: sdk.abi.driver.RowIterator_ABI = undefined;
                     const spec = sdk.abi.driver.ReadSpec_ABI{
                         .table = sdk.abi.Slice_ABI.from("file"),
-                        .filter_sql_or_expr = sdk.abi.Slice_ABI.from(inputs.source_path),
+                        .filter_sql_or_expr = sdk.abi.Slice_ABI.from(local_path),
                     };
                     if (read_fn(fs_repo.handle, &spec, &iter) == .ok) {
                         defer iter.vtable.deinit(iter.handle);
@@ -106,7 +109,7 @@ pub const WriteDataService = struct {
                     }
                 }
             }
-            const file = try std.Io.Dir.cwd().openFile(self.state.io, inputs.source_path, .{});
+            const file = try std.Io.Dir.cwd().openFile(self.state.io, local_path, .{});
             defer file.close(self.state.io);
             const stat = try file.stat(self.state.io);
             const buf = try alloc.alloc(u8, @intCast(stat.size));
@@ -126,8 +129,8 @@ pub const WriteDataService = struct {
 
         const target_name = if (inputs.name.len > 0)
             inputs.name
-        else if (inputs.source_path.len > 0)
-            std.fs.path.basename(inputs.source_path)
+        else if (local_path.len > 0)
+            std.fs.path.basename(local_path)
         else
             return error.MissingFileName;
 

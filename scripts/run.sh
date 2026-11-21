@@ -32,13 +32,26 @@ CMD="${1:-tui}"
 if [[ "$CMD" == "tui" || "$CMD" == "-t" || "$CMD" == "--tui" || "$CMD" == "serve" || "$CMD" == "-s" || "$CMD" == "--serve" ]]; then
     shift || true
     DB_PATH="${VAULT_DB_PATH:-$VAULT_ROOT/data/vault_catalog.db}"
+    LOG_DIR="$VAULT_ROOT/data/output/logs"
+    mkdir -p "$LOG_DIR"
+    export PARABELLUM_OTEL_FILE="${PARABELLUM_OTEL_FILE:-$LOG_DIR/otel_export.json}"
+    export PARABELLUM_OTEL_CONSOLE="${PARABELLUM_OTEL_CONSOLE:-false}"
+    ERR_LOG="$LOG_DIR/engine_stderr.log"
     cleanup_db() {
         rm -f "$DB_PATH" "${DB_PATH}-wal" "${DB_PATH}-shm"
     }
     trap cleanup_db EXIT INT TERM
     echo "==> Starting Parabellum Engine with TUI ('$PIPELINE')..."
+    set +e
     "$ENGINE_BIN" --plugin-dir "$PARABELLUM_PLUGIN_DIR" \
-        --serve --transport tui --pipeline "$PIPELINE" "$@"
+        --serve --transport vault_tui --pipeline "$PIPELINE" "$@" 2>"$ERR_LOG"
+    rc=$?
+    set -e
+    if [ $rc -ne 0 ] && [ -s "$ERR_LOG" ]; then
+        echo "==> Engine exited with code $rc. Last stderr lines:" >&2
+        tail -n 40 "$ERR_LOG" >&2
+    fi
+    exit $rc
 elif [[ "$CMD" == "validate" || "$CMD" == "-v" || "$CMD" == "--validate" ]]; then
     shift || true
     echo "==> Validating pipeline '$PIPELINE'..."

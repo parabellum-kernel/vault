@@ -24,6 +24,7 @@ endpoints:
     path: "/drive/v3/files"
     query:
       q: "appProperties has { key='vfs_role' and value='catalog' } and appProperties has { key='vfs_id' and value='{vault_id}' } and trashed=false"
+      orderBy: "modifiedTime desc"
       includeItemsFromAllDrives: "true"
       supportsAllDrives: "true"
       fields: "files(id,name,version,size,appProperties)"
