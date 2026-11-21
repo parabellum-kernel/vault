@@ -16,7 +16,7 @@ extensions:
   inbound_fs:
     listen: "./data/sync_dir?partition=official_docs"
   inbound_cli: {}
-  tui_inbound: {}
+  vault_tui: {}
   opentelemetry:
     file: "${OTEL_EXPORTER_FILE_PATH:-./data/output/logs/otel_export.json}"
     console: "${OTEL_LOG_CONSOLE:-false}"
@@ -183,6 +183,15 @@ pipelines:
         from: jobs
         params:
           op: open
+          vault_id: "${VAULT_ID:-default}"
+
+  preview:
+    steps:
+      - id: preview_file
+        uses: vault/vfs_read
+        from: jobs
+        params:
+          op: preview
           vault_id: "${VAULT_ID:-default}"
 
   stream_play:

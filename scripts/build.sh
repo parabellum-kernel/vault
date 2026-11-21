@@ -11,6 +11,8 @@ TARGET_DIR="$VAULT_ROOT/zig-out/lib"
 mkdir -p "$TARGET_DIR"
 
 COMPONENTS=(
+    "$PARABELLUM_ROOT/sdk",
+    "$PARABELLUM_ROOT/engine"
     "$PARABELLUM_ROOT/driver"
     "$PARABELLUM_ROOT/extension"
 )

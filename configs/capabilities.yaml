@@ -9,6 +9,8 @@ capabilities:
     target_kind: pipeline
     target: ls
     execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
     inputs:
       - name: parent_id
         label: Parent Inode ID
@@ -38,6 +40,13 @@ capabilities:
         condition_equals: dir
         param_map:
           - target_input: parent_id
+            source_field: inode_id
+      - label: Preview in Output
+        capability_id: preview
+        condition_field: kind
+        condition_equals: file
+        param_map:
+          - target_input: inode_id
             source_field: inode_id
       - label: Download & Open (xdg-open)
         capability_id: open
@@ -183,6 +192,54 @@ capabilities:
         required: true
     output:
       kind: record
+
+  - id: read
+    group: transfer
+    title: Read Byte Range
+    target_kind: pipeline
+    target: read
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+      - name: offset
+        label: Offset
+        field_type: int
+        required: false
+        default_value: "0"
+      - name: max_len
+        label: Max Length
+        field_type: int
+        required: false
+        default_value: "4096"
+      - name: encoding
+        label: Encoding
+        field_type: text
+        required: false
+        default_value: "base64"
+    output:
+      kind: record
+
+  - id: preview
+    group: transfer
+    title: Preview File
+    target_kind: pipeline
+    target: preview
+    execution_mode: sync_fast
+    hints:
+      tui.hidden: "true"
+    inputs:
+      - name: inode_id
+        label: Inode ID
+        field_type: text
+        required: true
+    output:
+      kind: document
+      mime_field: mime_type
 
   - id: stream_play
     group: transfer

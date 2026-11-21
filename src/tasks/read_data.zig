@@ -40,6 +40,10 @@ pub const ReadDataService = struct {
             return try openViaXdgOpen(self, alloc, entry, inputs.inode_id);
         }
 
+        if (std.mem.eql(u8, inputs.op, "preview")) {
+            return try previewInode(alloc, entry, inputs.inode_id);
+        }
+
         if (std.mem.eql(u8, inputs.op, "stream_play")) {
             const inode = entry.vault.catalog.getInode(inputs.inode_id) orelse return error.InodeNotFound;
             const total_size = inode.logical_size;
@@ -168,6 +172,7 @@ pub const ReadDataService = struct {
             };
         }
 
+        const inode = entry.vault.catalog.getInode(inputs.inode_id);
         const off: u64 = @intCast(@max(0, inputs.offset));
         const len: usize = @intCast(@max(0, inputs.max_len));
         const buf = try alloc.alloc(u8, len);
@@ -175,6 +180,8 @@ pub const ReadDataService = struct {
 
         const n = try entry.vault.readAt(inputs.inode_id, off, buf);
         const raw_data = try alloc.realloc(buf, n);
+        const total_sz: i64 = if (inode) |in| @intCast(in.logical_size) else @intCast(n);
+        const mime_t: []const u8 = if (inode) |in| (in.mime_type orelse "application/octet-stream") else "application/octet-stream";
         const out_data = if (std.mem.eql(u8, inputs.encoding, "base64")) blk: {
             const b64_len = std.base64.standard.Encoder.calcSize(raw_data.len);
             const b64_buf = try alloc.alloc(u8, b64_len);
@@ -184,11 +191,11 @@ pub const ReadDataService = struct {
         } else raw_data;
         return .{
             .status_code = 200,
-            .total_size = @intCast(n),
+            .total_size = total_sz,
             .offset = inputs.offset,
             .bytes_read = @intCast(n),
             .content_range = "",
-            .mime_type = "application/octet-stream",
+            .mime_type = mime_t,
             .data = out_data,
         };
     }
@@ -239,6 +246,73 @@ fn openViaXdgOpen(
         .content_range = "",
         .mime_type = "text/plain",
         .data = msg,
+    };
+}
+
+fn previewInode(
+    alloc: std.mem.Allocator,
+    entry: *VaultState.VaultEntry,
+    inode_id: []const u8,
+) !ReadDataOutputs {
+    const inode = entry.vault.catalog.getInode(inode_id) orelse return error.InodeNotFound;
+    var buf: [8192]u8 = undefined;
+    const n = entry.vault.readAt(inode_id, 0, &buf) catch 0;
+    const head = buf[0..n];
+
+    const mime_type: []const u8 = if (inode.mime_type) |m|
+        m
+    else if (n > 0)
+        tika.detect(head).mime_type
+    else
+        "application/octet-stream";
+
+    const is_text = (std.mem.startsWith(u8, mime_type, "text/") or
+        std.mem.eql(u8, mime_type, "application/json") or
+        std.mem.eql(u8, mime_type, "application/yaml") or
+        std.mem.eql(u8, mime_type, "application/x-yaml") or
+        std.mem.eql(u8, mime_type, "application/xml")) and
+        std.unicode.utf8ValidateSlice(head);
+
+    var aw: std.Io.Writer.Allocating = .init(alloc);
+    errdefer aw.deinit();
+
+    if (is_text) {
+        try aw.writer.print("File: {s} ({s}, {d} bytes)\n", .{ inode.name, mime_type, inode.logical_size });
+        try aw.writer.writeAll("------------------------------------------------------------\n");
+        try aw.writer.writeAll(head);
+        if (inode.logical_size > n) {
+            try aw.writer.print("\n\n... [preview truncated at {d} of {d} bytes]", .{ n, inode.logical_size });
+        }
+    } else {
+        const media_kind: []const u8 = if (std.mem.startsWith(u8, mime_type, "image/"))
+            "Image"
+        else if (std.mem.startsWith(u8, mime_type, "video/"))
+            "Video"
+        else if (std.mem.startsWith(u8, mime_type, "audio/"))
+            "Audio"
+        else if (std.mem.eql(u8, mime_type, "application/pdf"))
+            "PDF Document"
+        else if (std.mem.eql(u8, mime_type, "application/zip") or std.mem.eql(u8, mime_type, "application/x-cbr") or std.mem.eql(u8, mime_type, "application/vnd.comicbook+zip"))
+            "Archive / Manga"
+        else
+            "Binary File";
+
+        try aw.writer.print("File      : {s}\n", .{inode.name});
+        try aw.writer.print("Kind      : {s}\n", .{media_kind});
+        try aw.writer.print("MIME Type : {s}\n", .{mime_type});
+        try aw.writer.print("Size      : {d} bytes\n", .{inode.logical_size});
+        try aw.writer.print("Inode ID  : {s}\n\n", .{inode_id});
+        try aw.writer.writeAll("Tip: Press 'a' in Explorer -> Download & Open (xdg-open), Stream to Handler, or View Hex.\n");
+    }
+
+    return .{
+        .status_code = 200,
+        .total_size = @intCast(inode.logical_size),
+        .offset = 0,
+        .bytes_read = @intCast(n),
+        .content_range = "",
+        .mime_type = mime_type,
+        .data = try aw.toOwnedSlice(),
     };
 }
 
