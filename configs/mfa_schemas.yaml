@@ -1,0 +1,120 @@
+version: 2
+
+# =============================================================================
+# Authentication & MFA Persistence Schema Definitions
+# Normalized relational schema for `extension/authentication` over `mfa_db`.
+# Policy trees / factor ordering are stored as serialized `chain_spec` in
+# `mfa_policies` (avoiding recursive graph joins in SQLite) while subjects,
+# available factors, enrollments, sessions, attempts, replay JTIs, and audit
+# events are linked with explicit foreign keys.
+# =============================================================================
+
+schemas:
+  mfa:
+    # 1. Identities / Subjects
+    mfa_subjects:
+      columns:
+        subject_id: { type: text, pk: true }
+        status:     { type: text, default: "'active'" } # active | locked | disabled
+        created_at: { type: int64 }
+        updated_at: { type: int64 }
+
+    # 2. Catalog of available authentication factors
+    mfa_factors:
+      columns:
+        factor_id:          { type: text, pk: true }
+        factor_type:        { type: text }
+        category:           { type: text } # knowledge | possession | inherence
+        is_recovery:        { type: int64, default: 0 }
+        requires_challenge: { type: int64, default: 0 }
+        enabled:            { type: int64, default: 1 }
+        created_at:         { type: int64 }
+
+    # 3. Per-scope assurance policies & serialized factor-order/tree (`chain_spec`)
+    mfa_policies:
+      columns:
+        policy_id:           { type: text, pk: true }
+        action_scope:        { type: text }
+        policy_fingerprint:  { type: blob }
+        min_categories:      { type: int64, default: 2 }
+        allow_single_factor: { type: int64, default: 0 }
+        binding_mode:        { type: text, default: "'bound'" }
+        chain_spec:          { type: text } # serialized SecurityChain (tree + ordering)
+        enabled:             { type: int64, default: 1 }
+        updated_at:          { type: int64 }
+      indexes:
+        - action_scope
+
+    # 4. Subject <-> Factor enrollments & CAS-versioned sealed factor state
+    mfa_factor_enrollments:
+      columns:
+        enrollment_id: { type: text, pk: true } # "{subject_id}:{factor_id}"
+        subject_id:    { type: text, ref: mfa_subjects.subject_id, on_delete: cascade }
+        factor_id:     { type: text, ref: mfa_factors.factor_id, on_delete: cascade }
+        status:        { type: text, default: "'enrolled'" } # enrolled | pending | revoked
+        version:       { type: int64, default: 0 }
+        sealed_state:  { type: blob }
+        enrolled_at:   { type: int64 }
+        updated_at:    { type: int64 }
+      indexes:
+        - subject_id
+        - factor_id
+
+    # 5. Active & completed MFA sessions
+    mfa_sessions:
+      columns:
+        session_id:         { type: text, pk: true }
+        subject_id:         { type: text, ref: mfa_subjects.subject_id, on_delete: cascade }
+        policy_id:          { type: text, ref: mfa_policies.policy_id, on_delete: restrict }
+        status:             { type: text, default: "'active'" } # active | completed | invalidated | expired
+        current_step_order: { type: int64, default: 0 }
+        expires_at:         { type: int64 }
+        created_at:         { type: int64 }
+        updated_at:         { type: int64 }
+      indexes:
+        - subject_id
+        - policy_id
+        - status
+
+    # 6. Rate-limiting & lockout tracking linked to subjects, factors, enrollments, and sessions
+    mfa_attempts:
+      columns:
+        attempt_key:   { type: text, pk: true }
+        subject_id:    { type: text, ref: mfa_subjects.subject_id, on_delete: cascade }
+        factor_id:     { type: text, nullable: true, ref: mfa_factors.factor_id, on_delete: cascade }
+        enrollment_id: { type: text, nullable: true, ref: mfa_factor_enrollments.enrollment_id, on_delete: cascade }
+        session_id:    { type: text, nullable: true, ref: mfa_sessions.session_id, on_delete: set_null }
+        source_key:    { type: text, nullable: true }
+        fail_count:    { type: int64, default: 0 }
+        locked_until:  { type: int64, default: 0 }
+        updated_at:    { type: int64 }
+      indexes:
+        - subject_id
+        - factor_id
+        - enrollment_id
+        - session_id
+
+    # 7. Granted token replay protection
+    mfa_replay_jti:
+      columns:
+        jti:        { type: text, pk: true }
+        session_id: { type: text, nullable: true, ref: mfa_sessions.session_id, on_delete: set_null }
+        exp:        { type: int64 }
+      indexes:
+        - exp
+
+    # 8. Structured security audit trail
+    mfa_audit_log:
+      columns:
+        event_id:    { type: text, pk: true }
+        kind:        { type: text }
+        occurred_at: { type: int64 }
+        subject_id:  { type: text, nullable: true, ref: mfa_subjects.subject_id, on_delete: set_null }
+        session_id:  { type: text, nullable: true, ref: mfa_sessions.session_id, on_delete: set_null }
+        factor_id:   { type: text, nullable: true, ref: mfa_factors.factor_id, on_delete: set_null }
+        source_key:  { type: text, nullable: true }
+        detail:      { type: int64, default: 0 }
+      indexes:
+        - subject_id
+        - session_id
+        - occurred_at

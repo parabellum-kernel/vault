@@ -37,6 +37,7 @@ pub fn getOrMountVault(state: *VaultState, vault_id: []const u8, device_id: []co
     var cfg = try AppConfig.load(state.allocator, state.io, "configs/.env", "configs/vault.yaml");
     defer cfg.deinit(state.allocator);
 
+    const now_s = VaultState.unixNow(state.io);
     const effective_dev = if (std.mem.eql(u8, device_id, "vault-desktop-01")) cfg.device_id else device_id;
     const entry = if (state.catalog_repo != null and state.blob_repo != null)
         try state.mountConfiguredVault(
@@ -47,10 +48,10 @@ pub fn getOrMountVault(state: *VaultState, vault_id: []const u8, device_id: []co
             state.catalog_repo.?.vtable,
             state.blob_repo.?.handle,
             state.blob_repo.?.vtable,
-            1700000000,
+            now_s,
         )
     else
-        try state.createInMemoryVault(vault_id, effective_dev, 1700000000);
+        try state.createInMemoryVault(vault_id, effective_dev, now_s);
 
     // Provision configured logical partitions from configs/vault.yaml if mounting the configured vault.
     if (std.mem.eql(u8, vault_id, cfg.vault_id)) {
@@ -62,7 +63,7 @@ pub fn getOrMountVault(state: *VaultState, vault_id: []const u8, device_id: []co
                 p.quota_gb * 1024 * 1024 * 1024,
                 p.policy_kind,
                 &.{},
-                1700000000,
+                now_s,
             ) catch {};
         }
     }

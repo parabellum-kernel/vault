@@ -208,44 +208,27 @@ fn openViaXdgOpen(
     inode_id: []const u8,
 ) !ReadDataOutputs {
     const inode = entry.vault.catalog.getInode(inode_id) orelse return error.InodeNotFound;
-    const tmp_path = try std.fmt.allocPrint(alloc, "/tmp/vault-{s}-{s}", .{ inode_id, inode.name });
+    const len: usize = @intCast(inode.logical_size);
+    const out_buf = try alloc.alloc(u8, len);
+    errdefer alloc.free(out_buf);
 
-    const io = self.state.io;
-    const file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{ .truncate = true });
-    defer file.close(io);
-
-    var chunk: [262144]u8 = undefined;
     var offset: u64 = 0;
     while (offset < inode.logical_size) {
-        const n = try entry.vault.readAt(inode_id, offset, &chunk);
+        const n = try entry.vault.readAt(inode_id, offset, out_buf[@intCast(offset)..]);
         if (n == 0) break;
-        var off: usize = 0;
-        while (off < n) {
-            const w = std.c.write(file.handle, chunk[off..n].ptr, n - off);
-            if (w <= 0) return error.WriteFailed;
-            off += @intCast(w);
-        }
         offset += n;
     }
 
-    var child = try std.process.spawn(io, .{
-        .argv = &.{ "xdg-open", tmp_path },
-        .stdin = .ignore,
-        .stdout = .ignore,
-        .stderr = .ignore,
-    });
-    _ = &child;
-
-    self.logger.info("Opened '{s}' via xdg-open ({d} bytes)", .{ tmp_path, offset });
-    const msg = try std.fmt.allocPrint(alloc, "Opened {s} ({d} bytes)", .{ tmp_path, offset });
+    const mime_t = if (inode.mime_type) |m| try alloc.dupe(u8, m) else try alloc.dupe(u8, "application/octet-stream");
+    self.logger.info("Decrypted '{s}' in memory ({d} bytes, no /tmp plaintext write)", .{ inode.name, offset });
     return .{
         .status_code = 200,
         .total_size = @intCast(inode.logical_size),
         .offset = 0,
         .bytes_read = @intCast(offset),
         .content_range = "",
-        .mime_type = "text/plain",
-        .data = msg,
+        .mime_type = mime_t,
+        .data = out_buf[0..@intCast(offset)],
     };
 }
 

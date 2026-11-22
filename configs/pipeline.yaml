@@ -13,6 +13,7 @@ networks:
       default_action: allow
 
 extensions:
+  authentication: {}
   inbound_fs:
     listen: "./data/sync_dir?partition=official_docs"
   inbound_cli: {}
@@ -39,6 +40,13 @@ datasources:
     path: "${VAULT_DB_PATH:-./data/vault_catalog.db}"
     schema: "${VAULT_SCHEMA_PATH:-./configs/schemas.yaml}"
 
+  # 2b. Authentication & MFA persistence (`mfa_db`)
+  mfa_db:
+    driver: sqlite
+    role: duplex
+    path: "${MFA_DB_PATH:-./data/mfa.db}"
+    schema: "${MFA_SCHEMA_PATH:-./configs/mfa_schemas.yaml}"
+
   # 3. Google Drive storage datasource (Declarative REST API client via configs/api.gdrive.yaml)
   gdrive_primary:
     driver: rest_api
@@ -46,7 +54,7 @@ datasources:
     network: egress_net
     spec: "${VAULT_APIS_PATH:-./configs/api.gdrive.yaml}#gdrive_v3"
     vault_id: "${VAULT_ID:-default}"
-    node_id: "${VAULT_NODE_ID:-user-01}"
+    node_id: "${VAULT_NODE_ID:-node-primary}"
     credentials: "${VAULT_USER_KEY_PATH:-./configs/user_keys/oauth_user.json}"
 
   # 4. Local filesystem source (`libdriver_file_store.so`)

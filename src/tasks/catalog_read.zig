@@ -26,7 +26,7 @@ pub const CatalogReadService = struct {
         const entry = try container.getOrMountVault(self.state, inputs.vault_id, "vault-desktop-01");
 
         if (std.mem.eql(u8, inputs.op, "quotas")) {
-            var q = try entry.vault.getQuotas(1700000000);
+            var q = try entry.vault.getQuotas(VaultState.unixNow(self.state.io));
             defer q.deinit(entry.vault.allocator);
             const json = try std.fmt.allocPrint(
                 alloc,

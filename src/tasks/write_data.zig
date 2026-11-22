@@ -57,7 +57,7 @@ pub const WriteDataService = struct {
             }
             self.progress.report(0, total_packed);
 
-            const ids = try entry.vault.writePacked(batch, .{ .auto_pack_enabled = true }, 1700000000);
+            const ids = try entry.vault.writePacked(batch, .{ .auto_pack_enabled = true }, VaultState.unixNow(self.state.io));
             self.progress.report(total_packed, total_packed);
             defer {
                 for (ids) |id| entry.vault.allocator.free(id);
@@ -149,15 +149,16 @@ pub const WriteDataService = struct {
 
         self.progress.report(0, raw_bytes.len);
 
+        const now_s = VaultState.unixNow(self.state.io);
         const id = if (inputs.partition.len > 0)
-            try entry.partitions.writeFileWithMime(&entry.vault, inputs.partition, target_name, raw_bytes, mime_opt, 1700000000)
+            try entry.partitions.writeFileWithMime(&entry.vault, inputs.partition, target_name, raw_bytes, mime_opt, now_s)
         else
-            try entry.vault.write(parent, target_name, raw_bytes, .{ .mime_type = mime_opt }, 1700000000);
+            try entry.vault.write(parent, target_name, raw_bytes, .{ .mime_type = mime_opt }, now_s);
         defer self.state.allocator.free(id);
 
         if (prev_inode_id) |old_id| {
             if (!std.mem.eql(u8, old_id, id)) {
-                entry.vault.delete(old_id, 1700000000) catch {};
+                entry.vault.delete(old_id, now_s) catch {};
             }
         }
         self.progress.report(raw_bytes.len, raw_bytes.len);

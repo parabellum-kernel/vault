@@ -37,7 +37,7 @@ pub const MountService = struct {
                 @intCast(@max(0, inputs.quota_bytes)),
                 policy_kind,
                 &.{},
-                1700000000,
+                VaultState.unixNow(self.state.io),
             );
             self.logger.info("Created partition '{s}' in vault '{s}'", .{ inputs.partition, inputs.vault_id });
             return .{ .status = "partition_created", .vault_id = try alloc.dupe(u8, inputs.vault_id) };
