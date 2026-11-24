@@ -1,5 +1,5 @@
 const std = @import("std");
-const EnvStore = @import("env.zig").EnvStore;
+const EnvInterpolator = @import("parabellum_yaml").EnvInterpolator;
 const PartitionManager = @import("PartitionManager.zig");
 
 /// Declarative configuration loaded from `configs/.env` + `configs/vault.yaml`.
@@ -52,12 +52,15 @@ pub const AppConfig = struct {
     }
 
     pub fn load(allocator: std.mem.Allocator, io: std.Io, env_path: []const u8, yaml_path: []const u8) !AppConfig {
-        var env = EnvStore.init();
-        defer env.deinit(allocator);
+        var env_arena = std.heap.ArenaAllocator.init(allocator);
+        defer env_arena.deinit();
+        const env_alloc = env_arena.allocator();
+
+        var env = EnvInterpolator.init(true);
 
         if (readFileAlloc(allocator, io, env_path)) |raw_env| {
             defer allocator.free(raw_env);
-            try env.parseDotEnv(allocator, raw_env);
+            try env.parseDotEnv(env_alloc, raw_env);
         } else |_| {}
 
         var cfg = try initDefault(allocator);
@@ -108,7 +111,11 @@ pub const AppConfig = struct {
         return .most_available;
     }
 
-    pub fn parseVaultYaml(allocator: std.mem.Allocator, env: *const EnvStore, raw_yaml: []const u8, cfg: *AppConfig) !void {
+    pub fn parseVaultYaml(allocator: std.mem.Allocator, env: *const EnvInterpolator, raw_yaml: []const u8, cfg: *AppConfig) !void {
+        var interp_arena = std.heap.ArenaAllocator.init(allocator);
+        defer interp_arena.deinit();
+        const ia = interp_arena.allocator();
+
         var parts = std.ArrayListUnmanaged(PartitionSpec).empty;
         errdefer {
             for (parts.items) |*p| p.deinit(allocator);
@@ -144,8 +151,7 @@ pub const AppConfig = struct {
                 const colon = std.mem.indexOfScalar(u8, trimmed, ':') orelse continue;
                 const k = std.mem.trim(u8, trimmed[0..colon], " \t");
                 const raw_v = stripCommentAndQuotes(trimmed[colon + 1 ..]);
-                const v = try env.interpolate(allocator, raw_v);
-                defer allocator.free(v);
+                const v = try env.interpolate(ia, raw_v);
 
                 if (section == .vault) {
                     if (std.mem.eql(u8, k, "id")) {
@@ -194,8 +200,7 @@ pub const AppConfig = struct {
                 const colon = std.mem.indexOfScalar(u8, item_line, ':') orelse continue;
                 const k = std.mem.trim(u8, item_line[0..colon], " \t");
                 const raw_v = stripCommentAndQuotes(item_line[colon + 1 ..]);
-                const v = try env.interpolate(allocator, raw_v);
-                defer allocator.free(v);
+                const v = try env.interpolate(ia, raw_v);
 
                 if (std.mem.eql(u8, k, "name")) {
                     allocator.free(cur_part.?.name);

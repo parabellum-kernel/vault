@@ -34,7 +34,7 @@ if [[ "$CMD" == "tui" || "$CMD" == "-t" || "$CMD" == "--tui" || "$CMD" == "serve
     DB_PATH="${VAULT_DB_PATH:-$VAULT_ROOT/data/vault_catalog.db}"
     LOG_DIR="$VAULT_ROOT/data/output/logs"
     mkdir -p "$LOG_DIR"
-    export PARABELLUM_OTEL_FILE="${PARABELLUM_OTEL_FILE:-$LOG_DIR/otel_export.json}"
+    export PARABELLUM_OTEL_FILE="${PARABELLUM_OTEL_FILE:-$LOG_DIR/otel_export.log}"
     export PARABELLUM_OTEL_CONSOLE="${PARABELLUM_OTEL_CONSOLE:-false}"
     ERR_LOG="$LOG_DIR/engine_stderr.log"
     cleanup_db() {

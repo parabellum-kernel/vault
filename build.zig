@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
 
     const vfs_mod = libs_dep.module("vfs");
     const tika_mod = libs_dep.module("tika");
+    const yaml_mod = libs_dep.module("parabellum_yaml");
     const tui_mod = ext_dep.module("tui_inbound");
 
     // Task catalog shared library (`libvault.so`) loaded by Parabellum engine via pipeline.yaml.
@@ -33,6 +34,7 @@ pub fn build(b: *std.Build) void {
     });
     plugin_so.root_module.addImport("vfs", vfs_mod);
     plugin_so.root_module.addImport("tika", tika_mod);
+    plugin_so.root_module.addImport("parabellum_yaml", yaml_mod);
     b.installArtifact(plugin_so);
 
     // Vault TUI extension (`libext_vault_tui.so`) built on top of the `tui_inbound` framework.
@@ -53,6 +55,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
             .{ .name = "vfs", .module = vfs_mod },
             .{ .name = "tika", .module = tika_mod },
+            .{ .name = "parabellum_yaml", .module = yaml_mod },
         },
     });
 
@@ -66,6 +69,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "parabellum_sdk", .module = sdk_dep.module("parabellum_sdk") },
                 .{ .name = "vfs", .module = vfs_mod },
                 .{ .name = "tika", .module = tika_mod },
+                .{ .name = "parabellum_yaml", .module = yaml_mod },
                 .{ .name = "vault_app", .module = vault_app_mod },
             },
         }),

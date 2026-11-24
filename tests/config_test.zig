@@ -1,13 +1,15 @@
 const std = @import("std");
 const app = @import("vault_app");
 
-const EnvStore = app.env.EnvStore;
+const EnvInterpolator = app.env.EnvInterpolator;
 const AppConfig = app.config.AppConfig;
 
-test "EnvStore parses .env and interpolates ${VAR:-default}" {
-    const alloc = std.testing.allocator;
-    var env = EnvStore.init();
-    defer env.deinit(alloc);
+test "EnvInterpolator parses .env and interpolates ${VAR:-default}" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var env = EnvInterpolator.init(false);
 
     try env.parseDotEnv(alloc,
         \\# comment
@@ -16,11 +18,9 @@ test "EnvStore parses .env and interpolates ${VAR:-default}" {
     );
 
     const s1 = try env.interpolate(alloc, "${VAULT_ID:-default}");
-    defer alloc.free(s1);
     try std.testing.expectEqualStrings("prod-vault", s1);
 
     const s2 = try env.interpolate(alloc, "${MISSING_VAR:-fallback}");
-    defer alloc.free(s2);
     try std.testing.expectEqualStrings("fallback", s2);
 }
 
